@@ -463,6 +463,7 @@ namespace Simitone.Client.UI.Screens
 
             if (SwitchLot > 0)
             {
+                SynchronizeFamilyFame();
                 if (!Downtown) SavedLot = vm.Save();
                 if (SwitchLot == ActiveFamily.HouseNumber && SavedLot != null)
                 {
@@ -606,6 +607,22 @@ namespace Simitone.Client.UI.Screens
         }
 
         private VMMarshal SavedLot;
+
+        private void SynchronizeFamilyFame()
+        {
+            if (ActiveFamily == null || vm == null) return;
+            var neighborhood = Content.Get().Neighborhood;
+            var progress = FameProgressTransfer.CaptureFamily(ActiveFamily.FamilyGUIDs,
+                vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().Select(avatar =>
+                    new KeyValuePair<uint, FameProgress>(avatar.Object.OBJ.GUID,
+                        FameProgress.FromPersonData(avatar.GetPersonDataClone()))));
+            foreach (var entry in progress)
+            {
+                var neighborID = neighborhood.GetNeighborIDForGUID(entry.Key);
+                if (neighborID.HasValue) entry.Value.ApplyTo(neighborhood.GetNeighborByID(neighborID.Value)?.PersonData);
+            }
+            if (Downtown) FameProgressTransfer.ApplyToHome(SavedLot, progress);
+        }
 
         public void InitializeLot()
         {
@@ -997,6 +1014,7 @@ namespace Simitone.Client.UI.Screens
 
         public void Save()
         {
+            SynchronizeFamilyFame();
             //save the house first
             var iff = new IffFile();
             vm.TS1State.UpdateSIMI(vm);

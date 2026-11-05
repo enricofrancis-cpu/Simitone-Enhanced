@@ -1,0 +1,48 @@
+name: Fame workflow checks
+
+on:
+  pull_request:
+    branches: [enhanced-development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Generate MonoGame projects
+        shell: pwsh
+        run: |
+          Set-Location FreeSO/Other/libs/FSOMonoGame
+          ./protobuild.exe --generate
+      - name: Build Windows Release
+        run: dotnet build Client/Simitone/Simitone.Windows/Simitone.Windows.csproj -c Release
+      - name: Build fame regression executable
+        run: dotnet build Tests/Simitone.Fame.Tests -c Release
+      - name: Check fame transfer and neighbourhood persistence
+        run: dotnet run --project Tests/Simitone.Fame.Tests -c Release --no-build
+      - name: Publish self-contained Windows preview
+        run: >-
+          dotnet publish Client/Simitone/Simitone.Windows/Simitone.Windows.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishAot=false -p:PublishTrimmed=false -p:ErrorOnDuplicatePublishOutputFiles=false
+          -p:SimitonePreviewBundle=true
+          -o publish/superstar-win
+      - name: Prepare isolated test bundle
+        shell: pwsh
+        run: ./packaging/superstar/Prepare-Bundle.ps1
+      - name: Upload playable Windows preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: Simitone-Enhanced-Superstar-Preview-Windows-x64
+          path: release/Superstar-Preview-Windows/
+          if-no-files-found: error
+          retention-days: 30

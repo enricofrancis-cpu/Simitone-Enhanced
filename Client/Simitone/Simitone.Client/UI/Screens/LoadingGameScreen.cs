@@ -96,7 +96,10 @@ namespace Simitone.Client.UI.Screens
 
             (new Thread(() => {
                 VMContext.InitVMConfig(true);
+                // Register before content can assemble/cache any BHAV instructions.
+                Simitone.Client.Superstar.SuperstarRuntime.RegisterHandler();
                 FSO.Content.Content.Init(GlobalSettings.Default.StartupPath, GameFacade.GraphicsDevice);
+                Simitone.Client.Superstar.SuperstarRuntime.Install(GlobalSettings.Default.TS1HybridPath);
                 lock (this)
                 {
                     LoadingComplete = true;
