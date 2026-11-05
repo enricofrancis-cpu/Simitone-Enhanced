@@ -1,0 +1,37 @@
+name: Compatibility checks
+
+on:
+  pull_request:
+    branches: [enhanced-development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  skin-catalog:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Run skin catalogue regression checks
+        run: dotnet run --project Tests/Simitone.Compatibility.Tests -c Release
+
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Generate MonoGame projects
+        shell: pwsh
+        run: |
+          Set-Location FreeSO/Other/libs/FSOMonoGame
+          ./protobuild.exe --generate
+      - name: Build Windows Release
+        run: dotnet build Client/Simitone/Simitone.Windows/Simitone.Windows.csproj -c Release

@@ -197,24 +197,8 @@ namespace Simitone.Client.UI.Screens
                 )).ToList();
             ActiveHandgroupTex = ActiveBodyTex.Select(x => (RemoveExt(texnames.FirstOrDefault(y => RemoveExt(y) == "huao"+FindHG(x))) ?? "huao"+ CurrentSkin).Substring(4)).ToList();
 
-            for (int i=0; i<ActiveHeads.Count; i++)
-            {
-                if (ActiveHeadTex[i] == null)
-                {
-                    ActiveHeadTex.RemoveAt(i);
-                    ActiveHeads.RemoveAt(i--);
-                }
-            }
-
-            for (int i = 0; i < ActiveBodies.Count; i++)
-            {
-                if (ActiveBodyTex[i] == null)
-                {
-                    ActiveBodyTex.RemoveAt(i);
-                    ActiveHandgroupTex.RemoveAt(i);
-                    ActiveBodies.RemoveAt(i--);
-                }
-            }
+            ActiveHeads = SkinCatalog.FilterAvailable(heads, ActiveHeadTex);
+            ActiveBodies = SkinCatalog.FilterAvailable(bodies, ActiveBodyTex, ActiveHandgroupTex);
 
             HeadPositionLast = 0;
             BodyPositionLast = 0;
