@@ -263,7 +263,7 @@ namespace Simitone.Client.UI.Screens
         {
             ActiveFamily = Content.Get().Neighborhood.GetFamilyForHouse((short)house);
             CurrentNeighborhoodMode = GetNeighborhoodModeFromHouse(house);
-            InitializeLot(Content.Get().Neighborhood.GetHousePath(house), false);// "UserData/Houses/House21.iff"
+            if (!ResumeVacation(house)) return;
             Remove(TS1NeighPanel);
             if (switcher != null) Remove(switcher);
         }
@@ -463,11 +463,15 @@ namespace Simitone.Client.UI.Screens
 
             if (SwitchLot > 0)
             {
-                if (!Downtown) SavedLot = vm.Save();
+                if (!Downtown)
+                {
+                    SavedLot = vm.Save();
+                    SavedHomeWeather = vm.Context.Blueprint?.Weather?.WeatherData ?? (short)(1 << 8);
+                }
                 if (SwitchLot == ActiveFamily.HouseNumber && SavedLot != null)
                 {
                     Downtown = false;
-                    InitializeLot(SavedLot);
+                    InitializeLot(SavedLot, SavedHomeWeather);
                     SavedLot = null;
                 }
                 else
@@ -606,6 +610,49 @@ namespace Simitone.Client.UI.Screens
         }
 
         private VMMarshal SavedLot;
+        private short SavedHomeWeather = (short)(1 << 8);
+
+        private bool ResumeVacation(short homeLot)
+        {
+            var neighborhood = Content.Get().Neighborhood;
+            var path = VacationCheckpoint.GetPath(neighborhood.UserPath, homeLot);
+            if (ActiveFamily == null || !File.Exists(path))
+            {
+                Downtown = false;
+                SavedLot = null;
+                InitializeLot(neighborhood.GetHousePath(homeLot), false);
+                return true;
+            }
+
+            VacationCheckpoint checkpoint;
+            VMMarshal home;
+            VMMarshal destination;
+            try
+            {
+                checkpoint = VacationCheckpoint.Read(path);
+                if (!checkpoint.MatchesHousehold(homeLot, ActiveFamily.ChunkID,
+                    ActiveFamily.FamilyNumber, ActiveFamily.FamilyGUIDs))
+                    throw new InvalidDataException("The vacation checkpoint does not belong to this household.");
+                // Decode both snapshots before replacing the currently displayed neighbourhood.
+                home = VacationLotSnapshot.Read(checkpoint.HomeState, homeLot);
+                destination = VacationLotSnapshot.Read(checkpoint.DestinationState, checkpoint.DestinationLot);
+            }
+            catch (Exception error)
+            {
+                ShowSaveError("The saved vacation could not be opened. The checkpoint has been kept.", error);
+                return false;
+            }
+
+            ActiveFamily.SelectWholeFamily();
+            neighborhood.GameState.ActiveFamily = ActiveFamily;
+            neighborhood.GameState.DowntownSimGUID = checkpoint.ControllingSim;
+            neighborhood.GameState.LotTransitInfo = checkpoint.TransitInfo;
+            SavedLot = home;
+            SavedHomeWeather = checkpoint.HomeWeather;
+            Downtown = true;
+            InitializeLot(destination, checkpoint.DestinationWeather);
+            return true;
+        }
 
         public void InitializeLot()
         {
@@ -648,13 +695,14 @@ namespace Simitone.Client.UI.Screens
             vm.OnGenericVMEvent += Vm_OnGenericVMEvent;
         }
 
-        public void InitializeLot(VMMarshal marshal)
+        public void InitializeLot(VMMarshal marshal, short? weatherData = null)
         {
             InitializeLot();
             vm.MyUID = 65537;
             vm.Load(marshal);
 
             vm.TS1State.ActivateFamily(vm, ActiveFamily);
+            PendingWeatherData = weatherData;
 
             var settings = GlobalSettings.Default;
             var myClient = new VMNetClient
@@ -960,7 +1008,7 @@ namespace Simitone.Client.UI.Screens
                         Buttons = 
                         canSave?
                         UIAlertButton.YesNoCancel(
-                            (b) => { Save(); GameFacade.Game.Exit(); },
+                            (b) => { if (Save()) GameFacade.Game.Exit(); },
                             (b) => { GameFacade.Game.Exit(); },
                             (b) => { CloseAlert.Close(); CloseAlert = null; }
                             )
@@ -986,7 +1034,7 @@ namespace Simitone.Client.UI.Screens
                     Message = GameFacade.Strings.GetString("153", "4"), //Do you want to save the game?
                     Buttons =
                     UIAlertButton.YesNoCancel(
-                        (b) => { Save(); ExitLot(); CloseAlert.Close(); CloseAlert = null; },
+                        (b) => { if (Save()) { ExitLot(); CloseAlert.Close(); CloseAlert = null; } },
                         (b) => { ExitLot(); CloseAlert.Close(); CloseAlert = null; },
                         (b) => { CloseAlert.Close(); CloseAlert = null; }
                         )
@@ -995,8 +1043,60 @@ namespace Simitone.Client.UI.Screens
             }
         }
 
-        public void Save()
+        public bool Save()
         {
+            try
+            {
+                SaveCore();
+                return true;
+            }
+            catch (Exception error)
+            {
+                ShowSaveError("The game could not be saved. You are still on the current lot.", error);
+                return false;
+            }
+        }
+
+        private void ShowSaveError(string message, Exception error)
+        {
+            UIMobileAlert alert = null;
+            alert = new UIMobileAlert(new UIAlertOptions
+            {
+                Title = "Save game",
+                Message = message + "\n\n" + error.Message,
+                Buttons = UIAlertButton.Ok((b) => alert.Close())
+            });
+            GlobalShowDialog(alert, true);
+        }
+
+        private void SaveCore()
+        {
+            var neighborhood = Content.Get().Neighborhood;
+            if (Downtown && VacationCheckpoint.IsVacationLot(vm.GetGlobalValue(10)))
+            {
+                if (ActiveFamily == null || SavedLot == null)
+                    throw new InvalidOperationException("The home-lot snapshot needed to save this vacation is unavailable.");
+                vm.TS1State.UpdateSIMI(vm);
+                var checkpoint = new VacationCheckpoint
+                {
+                    HomeLot = ActiveFamily.HouseNumber,
+                    DestinationLot = vm.GetGlobalValue(10),
+                    FamilyID = ActiveFamily.ChunkID,
+                    FamilyNumber = ActiveFamily.FamilyNumber,
+                    ControllingSim = neighborhood.GameState.DowntownSimGUID,
+                    TransitInfo = neighborhood.GameState.LotTransitInfo,
+                    HomeWeather = SavedHomeWeather,
+                    DestinationWeather = vm.Context.Blueprint?.Weather?.WeatherData ?? (short)(1 << 8),
+                    HomeState = VacationLotSnapshot.Write(SavedLot),
+                    DestinationState = VacationLotSnapshot.Write(vm.Save())
+                };
+                // Stage/validate before saving neighbourhood changes. Only the checkpoint
+                // is replaced atomically; the existing neighbourhood save is not transactional.
+                checkpoint.Save(VacationCheckpoint.GetPath(neighborhood.UserPath, checkpoint.HomeLot),
+                    () => { neighborhood.SaveNeighbourhood(true); });
+                return;
+            }
+
             //save the house first
             var iff = new IffFile();
             vm.TS1State.UpdateSIMI(vm);
@@ -1040,6 +1140,13 @@ namespace Simitone.Client.UI.Screens
             var weatherData = vm.Context.Blueprint?.Weather?.WeatherData ?? (short)(1 << 8);
             Directory.CreateDirectory(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/"));
             File.WriteAllBytes(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.weather"), BitConverter.GetBytes(weatherData));
+
+            // Choosing "do not save" after returning home keeps the last vacation save.
+            if (!Downtown && ActiveFamily != null && vm.GetGlobalValue(10) == ActiveFamily.HouseNumber)
+            {
+                var checkpointPath = VacationCheckpoint.GetPath(neighborhood.UserPath, ActiveFamily.HouseNumber);
+                if (File.Exists(checkpointPath)) File.Delete(checkpointPath);
+            }
         }
 
         public PNG GeneratePNG(Texture2D data)
