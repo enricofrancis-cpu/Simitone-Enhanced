@@ -67,6 +67,9 @@ namespace Simitone.Client.Superstar
             avatar.SetPersonData(VMPersonDataVariable.TS1FameStarPower, (short)rank);
             avatar.SetPersonData(VMPersonDataVariable.TS1FameScore,
                 (short)Math.Max(avatar.GetPersonData(VMPersonDataVariable.TS1FameScore), Rules.Requirements[rank - 1].Score));
+            avatar.SetPersonData(VMPersonDataVariable.TS1FameStarHighWatermark,
+                (short)Math.Max(avatar.GetPersonData(VMPersonDataVariable.TS1FameStarHighWatermark),
+                    avatar.GetPersonData(VMPersonDataVariable.TS1FameScore)));
             Synchronize(avatar);
             Log("PREVIEW OVERRIDE: advanced selected Sim to rank " + rank);
         }

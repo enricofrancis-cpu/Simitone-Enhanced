@@ -106,6 +106,22 @@ internal static class SuperstarChecks
             "Away skill gains lost, aliased or overwrote unrelated data");
         Check(restored[(int)VMPersonDataVariable.JobType] == 0 && restored[(int)VMPersonDataVariable.JobPromotionLevel] == 0,
             "Agency enrollment restored a stale ordinary career");
+        var savedNeighbors = new NBRS();
+        var enrolled = Neighbor(1, 101, 123, 5);
+        enrolled.Name = "Synthetic enrolled Sim";
+        enrolled.PersonMode = 9;
+        enrolled.PersonData = restored;
+        savedNeighbors.AddNeighbor(enrolled);
+        using (var memory = new MemoryStream())
+        {
+            savedNeighbors.Write(null, memory);
+            memory.Position = 0;
+            var reloaded = new NBRS(); reloaded.Read(null, memory);
+            var afterReload = reloaded.NeighbourByID[1].PersonData;
+            Check(afterReload[(int)VMPersonDataVariable.JobType] == 0 &&
+                afterReload[(int)VMPersonDataVariable.CreativitySkill] == 750 && afterReload[80] == 78,
+                "Enrollment/skills/fame did not survive neighbourhood serialization together");
+        }
 
         var fallback = new Fallback();
         var handler = new SuperstarGenericCall(fallback);
