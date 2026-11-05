@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Client/Simitone/Simitone.Client/Utils/VacationCheckpoint.cs" Link="VacationCheckpoint.cs" />
+    <Compile Include="../../Client/Simitone/Simitone.Client/Utils/VacationLotSnapshot.cs" Link="VacationLotSnapshot.cs" />
+    <ProjectReference Include="../../FreeSO/TSOClient/tso.simantics/FSO.SimAntics.csproj" />
+  </ItemGroup>
+</Project>
