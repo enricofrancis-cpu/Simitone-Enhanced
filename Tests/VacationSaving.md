@@ -9,7 +9,7 @@ Simitone saves that already overwrote a destination house.
 - Saving while a household is on vacation captures the live destination VM and
   the home VM retained when the trip started. Travel context identifies the
   household, controlling Sim, destination, transit mode and each lot's weather.
-- The checkpoint lives in that neighbourhood's
+- The checkpoint lives in Simitone's copied neighbourhood's
   `Simitone/Vacations/HouseXX.svc`, keyed by the household's home lot. The vacation
   destination's house IFF is not overwritten by this save path.
 - Reopen the household's **home lot** from the neighbourhood to resume its trip.
@@ -28,6 +28,9 @@ neighbourhood-save callback cannot replace the previous checkpoint. The existing
 neighbourhood/character file writes are **not** a multi-file transaction: a disk
 failure after those writes may leave them newer than the retained checkpoint.
 Backups must include both neighbourhood data and its checkpoint directory.
+This does not fix the engine's broader in-memory neighbourhood discard semantics.
+Restart before verifying a discarded trip so funds/inventory are reloaded from
+the persisted neighbourhood as well as the VM checkpoint.
 
 ## Automated checks
 
@@ -56,8 +59,12 @@ scripts, actual VM activation, vacation fees, inventory transfer or returning ho
 
 ## Required in-game verification
 
-Use a disposable **complete copy** of the installation's game data and UserData.
-Launch Simitone with that copy's `-path`; do not test against the original data.
+Use a separate disposable Windows account or VM, with copies of the game's data
+and the Simitone profile. On Windows, Simitone writes its copied neighbourhoods
+under `Documents/Simitone/UserData*`; setting `-path` alone does **not** isolate
+these saves. Launch with the copied game's `-path` and verify the profile and
+neighbourhood paths belong to the test account before running. Do not use the
+original game data or the normal Simitone profile for these checks.
 
 1. Record a household's members, funds, inventory, home objects and home clock.
    Make a backup and note the vacation destination IFF's hash.
@@ -70,8 +77,8 @@ Launch Simitone with that copy's `-path`; do not test against the original data.
 4. Save again, restart again, travel between vacation destinations and return
    home normally. Check home layout, motives, purchases, funds and household
    membership; no duplicate Sims should appear.
-5. After returning, exit without saving and confirm reopening restores the last
-   saved trip. Then return and save at home; confirm the checkpoint is removed
+5. After returning, exit without saving, restart Simitone, and confirm reopening
+   restores the last saved trip. Then return and save at home; confirm the checkpoint is removed
    and a fresh restart opens the home rather than the vacation.
 6. In disposable copies, corrupt a checkpoint and verify an error is shown without
    deleting it. Test a save failure and confirm Save-and-Quit/Return does not exit.
