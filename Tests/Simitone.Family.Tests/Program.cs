@@ -32,6 +32,13 @@ neighbors.Write(resource,stream); stream.Position=0;
 var loaded=new NBRS(); loaded.Read(new IffFile(),stream);
 Check(loaded.NeighbourByID[1].PersonData[61]==0 && loaded.NeighbourByID[2].PersonData[61]==8, "membership did not survive NBRS save/reload");
 Check(loaded.NeighbourByID[1].PersonData[80]==7 && loaded.NeighbourByID[1].Relationships[42][1]==80, "roundtrip lost unrelated state");
+// SaveNeighbourhood writes the entire IFF, not just NBRS. Verify that path too.
+foreach (var chunk in resource.ListAll()) chunk.ChunkLabel="";
+using var wholeFile=new MemoryStream();
+resource.Write(wholeFile); wholeFile.Position=0;
+var reloaded=new IffFile(); reloaded.Read(wholeFile);
+Check(reloaded.Get<FAMs>(7)==null && reloaded.Get<FAMI>(7).FamilyGUIDs.SequenceEqual(new uint[]{99}), "whole IFF retained deleted family data");
+Check(reloaded.Get<NBRS>(1).NeighbourByID[1].PersonData[61]==0 && reloaded.Get<FAMI>(8).FamilyGUIDs.Contains(20u), "whole IFF lost membership cleanup or unrelated family");
 foreach (var id in new ushort[]{0,1000,2000}) {
     var protectedFamily=new FAMI { ChunkProcessed=true, ChunkID=id, FamilyGUIDs=new uint[]{11} }; resource.AddChunk(protectedFamily);
     Check(!FamilyDeletion.DeleteUnplaced(resource,protectedFamily), "protected family deleted");
