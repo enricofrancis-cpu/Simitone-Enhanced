@@ -1,28 +1,22 @@
-Simitone Enhanced - experimental Superstar preview (Windows x64)
+Simitone Enhanced - experimental combined gameplay preview (Windows x64)
 
-1. Extract the ENTIRE archive to a writable folder outside your Sims installation.
-2. Run Start-Superstar-Preview.cmd.
-3. Select your existing Complete Collection game installation when prompted.
-   The game assets are read from there. Saves/config go into this preview's
-   TestProfile folder. The original installation is not the save destination.
-4. Keep the lib folder and superstar-preview.marker together. Even launching
-   lib/Simitone.exe directly uses TestProfile while that marker is present.
-5. Open a family, join the fame career through the tabloid, and travel to Studio
-   Town. Use the career panel to see stars, score progress, skill targets and
-   celebrity-friend requirements. The relationship Fame button filters contacts.
-6. The career panel's Test button can advance half a star, maximize skills, or
-   reset to enrolled. These are explicit test overrides, not normal promotions.
-   Next half-star ends any ordinary career. Use real gigs to test normal gates.
+1. Extract the ENTIRE archive into a NEW writable folder outside your Sims installation.
+2. Run Start-Gameplay-Preview.cmd inside Windows/Parallels.
+3. Select your existing Complete Collection installation if prompted.
+4. Use the new TestProfile created inside this extracted folder. Keep lib intact.
+   Do not extract over the earlier preview or copy experimental saves into your normal profile.
 
-The .NET runtime is included. No original Sims game assets are included.
-This is a test build, not a claim of original-executable parity. Original object
-scripts still provide auditions, animations, payouts, rewards and decay. Those
-flows require in-game testing. See Superstar-Preview.md for the full checklist
-and explicit preview rules, including friendship and rank-change policies.
+Includes: Superstar progression/UI/persistence and test tools; skin catalogue
+preservation; pet/baby naming dialog; unplaced family deletion cleanup; phone-book
+safety; per-lot weather files and repaired blueprint export paths. The .NET runtime
+is included. Original game assets are not included.
 
-When reporting a problem, include the gig, star level, expected/actual result,
-and TestProfile/superstar-preview.log. Please describe any SimAntics error too.
-Do not copy these experimental saves over your normal game saves.
+IMPORTANT: Return home before saving. Vacation checkpoints and eviction fixes
+are NOT included. This is an unmerged test candidate, not a stable release.
 
-Source: https://github.com/enricofrancis-cpu/Simitone-Enhanced (PR 3)
-Upstreams: https://github.com/alexjyong/Simitone and https://github.com/alexjyong/FreeSO
+Read Gameplay-Test-Preview.md for the test checklist and remaining limitations.
+For Superstar problems include TestProfile/superstar-preview.log, the gig, star
+level, expected/actual behavior and any SimAntics error. Other errors can be
+reported with the full displayed exception or screenshot.
+
+Source: https://github.com/enricofrancis-cpu/Simitone-Enhanced

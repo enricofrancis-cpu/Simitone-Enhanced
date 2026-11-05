@@ -1,6 +1,6 @@
 param(
-    [string]$PublishDirectory = "publish/superstar-win",
-    [string]$OutputDirectory = "release/Superstar-Preview-Windows"
+    [string]$PublishDirectory = "publish/gameplay-win",
+    [string]$OutputDirectory = "release/Gameplay-Preview-Windows"
 )
 $ErrorActionPreference = "Stop"
 $lib = Join-Path $OutputDirectory "lib"
@@ -24,9 +24,10 @@ if (Test-Path "$lib/runtimes") {
     Get-ChildItem "$lib/runtimes" -Directory | Where-Object { $_.Name -notin @("win", "win-x64") } |
         ForEach-Object { Remove-Item $_.FullName -Recurse -Force }
 }
-Copy-Item "packaging/superstar/Start-Superstar-Preview.cmd" $OutputDirectory
+Copy-Item "packaging/superstar/Start-Gameplay-Preview.cmd" $OutputDirectory
 Copy-Item "packaging/superstar/README.txt" $OutputDirectory
 Copy-Item "development/Superstar-Preview.md" $OutputDirectory
+Copy-Item "development/Gameplay-Test-Preview.md" $OutputDirectory
 Copy-Item "FreeSO/LICENSE.md" "$OutputDirectory/FreeSO-LICENSE.md"
 Copy-Item "FreeSO/Other/libs/FSOMonoGame/LICENSE.txt" "$OutputDirectory/MonoGame-LICENSE.txt"
 foreach ($required in @("Simitone.exe", "Simitone.dll", "Simitone.runtimeconfig.json", "coreclr.dll",
@@ -36,4 +37,4 @@ foreach ($required in @("Simitone.exe", "Simitone.dll", "Simitone.runtimeconfig.
 }
 if (Test-Path "$OutputDirectory/TestProfile") { throw "Do not package personal test saves." }
 if (Test-Path "$lib/GameData") { throw "Do not package original game assets." }
-Write-Host "Self-contained Superstar preview prepared at $OutputDirectory"
+Write-Host "Self-contained gameplay preview prepared at $OutputDirectory"
