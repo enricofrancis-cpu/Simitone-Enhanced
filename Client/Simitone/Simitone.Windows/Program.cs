@@ -42,6 +42,12 @@ namespace Simitone.Windows
 
             ILocator gameLocator;
             bool linux = pid == PlatformID.MacOSX || pid == PlatformID.Unix;
+            if (!linux || Simitone.Client.Utils.PreviewProfile.HasOverride(args))
+            {
+                FSOEnvironment.UserDir = Simitone.Client.Utils.PreviewProfile.Resolve(args,
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Simitone/"), baseDir);
+                Directory.CreateDirectory(FSOEnvironment.UserDir);
+            }
             if (linux && Directory.Exists("/Users"))
                 gameLocator = new MacOSLocator();
             else if (linux)
@@ -116,7 +122,6 @@ namespace Simitone.Windows
             // Set FSOEnvironment.UserDir early so GlobalSettings can load correctly
             if (!linux)
             {
-                FSOEnvironment.UserDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Simitone/").Replace('\\', '/');
                 Directory.CreateDirectory(FSOEnvironment.UserDir);
             }
 
