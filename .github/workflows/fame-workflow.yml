@@ -34,6 +34,7 @@ jobs:
           dotnet publish Client/Simitone/Simitone.Windows/Simitone.Windows.csproj
           -c Release -r win-x64 --self-contained true
           -p:PublishAot=false -p:PublishTrimmed=false -p:ErrorOnDuplicatePublishOutputFiles=false
+          -p:SimitonePreviewBundle=true
           -o publish/superstar-win
       - name: Prepare isolated test bundle
         shell: pwsh

@@ -20,10 +20,10 @@ playthrough; it is intended for that verification now.
 - The career panel shows fame titles/stars, score progress toward the next rank,
   celebrity-friend power, and the next six skill targets. Normal careers retain
   their own panel. Friend, family and famous-contact filters now apply.
-- Fame and the six ordinary skills synchronize to neighbourhood records before
+- Fame, career identity/enrollment fields and the six ordinary skills synchronize to neighbourhood records before
   saves/travel and to retained home avatars before returning. Native save-Sim
   call 25 also synchronizes these fields. Motives, inventory, personality and
-  ordinary-career data are not arbitrarily copied by this adapter.
+  other person-data fields are not arbitrarily copied by this adapter.
 - Diagnostics go to `TestProfile/superstar-preview.log`, including loaded tuning,
   changed/blocked checks, and explicit test overrides.
 

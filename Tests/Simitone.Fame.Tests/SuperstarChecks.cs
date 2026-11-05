@@ -99,9 +99,13 @@ internal static class SuperstarChecks
         var captured = FameProgress.FromPersonData(source);
         source[(int)VMPersonDataVariable.CreativitySkill] = 0;
         var restored = new short[88]; restored[61] = 123;
+        restored[(int)VMPersonDataVariable.JobType] = 5;
+        restored[(int)VMPersonDataVariable.JobPromotionLevel] = 8;
         captured.ApplyTo(restored);
         Check(restored[(int)VMPersonDataVariable.CreativitySkill] == 750 && restored[61] == 123,
             "Away skill gains lost, aliased or overwrote unrelated data");
+        Check(restored[(int)VMPersonDataVariable.JobType] == 0 && restored[(int)VMPersonDataVariable.JobPromotionLevel] == 0,
+            "Agency enrollment restored a stale ordinary career");
 
         var fallback = new Fallback();
         var handler = new SuperstarGenericCall(fallback);

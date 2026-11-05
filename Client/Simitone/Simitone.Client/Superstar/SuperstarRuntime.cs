@@ -63,6 +63,7 @@ namespace Simitone.Client.Superstar
             int rank = Math.Max(0, Math.Min(10, (int)avatar.GetPersonData(VMPersonDataVariable.TS1FameStarPower)));
             rank = Math.Min(10, rank + 1);
             avatar.SetPersonData(VMPersonDataVariable.JobType, 0);
+            avatar.SetPersonData(VMPersonDataVariable.JobPromotionLevel, 0);
             avatar.SetPersonData(VMPersonDataVariable.TS1FameStarPower, (short)rank);
             avatar.SetPersonData(VMPersonDataVariable.TS1FameScore,
                 (short)Math.Max(avatar.GetPersonData(VMPersonDataVariable.TS1FameScore), Rules.Requirements[rank - 1].Score));
@@ -82,6 +83,7 @@ namespace Simitone.Client.Superstar
         {
             if (!PreviewToolsEnabled) return;
             avatar.SetPersonData(VMPersonDataVariable.JobType, 0);
+            avatar.SetPersonData(VMPersonDataVariable.JobPromotionLevel, 0);
             avatar.SetPersonData(VMPersonDataVariable.TS1FameScore, 1);
             avatar.SetPersonData(VMPersonDataVariable.TS1FameStarPower, 0);
             avatar.SetPersonData(VMPersonDataVariable.TS1FameStarHighWatermark, 0);

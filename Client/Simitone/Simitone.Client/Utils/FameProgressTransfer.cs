@@ -14,6 +14,8 @@ namespace Simitone.Client.Utils
         public readonly short StarPower;
         public readonly short HighWatermark;
         private readonly short[] SkillValues;
+        private readonly short? CareerType;
+        private readonly short? CareerLevel;
         public static readonly IReadOnlyList<VMPersonDataVariable> SkillFields = Array.AsReadOnly(new[] {
             VMPersonDataVariable.CookingSkill, VMPersonDataVariable.MechanicalSkill,
             VMPersonDataVariable.CharismaSkill, VMPersonDataVariable.BodySkill,
@@ -26,11 +28,15 @@ namespace Simitone.Client.Utils
             StarPower = starPower;
             HighWatermark = highWatermark;
             SkillValues = null;
+            CareerType = null;
+            CareerLevel = null;
         }
 
         private FameProgress(short[] data) : this(data[80], data[81], data[82])
         {
             SkillValues = SkillFields.Select(x => data[(int)x]).ToArray();
+            CareerType = data[(int)VMPersonDataVariable.JobType];
+            CareerLevel = data[(int)VMPersonDataVariable.JobPromotionLevel];
         }
 
         public static FameProgress FromPersonData(short[] data)
@@ -47,6 +53,11 @@ namespace Simitone.Client.Utils
             personData[(int)VMPersonDataVariable.TS1FameStarHighWatermark] = HighWatermark;
             if (SkillValues != null)
                 for (int i = 0; i < SkillValues.Length; i++) personData[(int)SkillFields[i]] = SkillValues[i];
+            if (CareerType.HasValue)
+            {
+                personData[(int)VMPersonDataVariable.JobType] = CareerType.Value;
+                personData[(int)VMPersonDataVariable.JobPromotionLevel] = CareerLevel.Value;
+            }
         }
     }
 
