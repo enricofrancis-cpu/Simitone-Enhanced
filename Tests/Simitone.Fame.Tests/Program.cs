@@ -72,3 +72,4 @@ using (var stream = new MemoryStream())
     Check(data[80] == 550 && data[81] == 9 && data[82] == 600, "Neighbourhood save/reload lost fame fields");
 }
 Console.WriteLine("PASS: family-only capture, stale home repair, multi-lot updates, demotion/reset, GUID identity, unrelated-field/visitor isolation, short data, and real NBRS save/reload.");
+SuperstarChecks.Run(args);

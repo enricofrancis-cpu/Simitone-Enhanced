@@ -7,6 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Client/Simitone/Simitone.Client/Utils/FameProgressTransfer.cs" Link="FameProgressTransfer.cs" />
+    <Compile Include="../../Client/Simitone/Simitone.Client/Utils/PreviewProfile.cs" Link="PreviewProfile.cs" />
+    <Compile Include="../../Client/Simitone/Simitone.Client/Superstar/FameRules.cs" Link="FameRules.cs" />
+    <Compile Include="../../Client/Simitone/Simitone.Client/Superstar/SuperstarRuntime.cs" Link="SuperstarRuntime.cs" />
     <ProjectReference Include="../../FreeSO/TSOClient/tso.simantics/FSO.SimAntics.csproj" />
   </ItemGroup>
 </Project>

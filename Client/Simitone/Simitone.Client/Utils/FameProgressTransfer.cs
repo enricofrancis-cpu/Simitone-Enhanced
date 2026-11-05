@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System;
+using System.Linq;
 using FSO.SimAntics.Marshals;
 using FSO.SimAntics.Model;
 
@@ -11,12 +13,30 @@ namespace Simitone.Client.Utils
         public readonly short Score;
         public readonly short StarPower;
         public readonly short HighWatermark;
+        private readonly short[] SkillValues;
+        public static readonly IReadOnlyList<VMPersonDataVariable> SkillFields = Array.AsReadOnly(new[] {
+            VMPersonDataVariable.CookingSkill, VMPersonDataVariable.MechanicalSkill,
+            VMPersonDataVariable.CharismaSkill, VMPersonDataVariable.BodySkill,
+            VMPersonDataVariable.LogicSkill, VMPersonDataVariable.CreativitySkill
+        });
 
         public FameProgress(short score, short starPower, short highWatermark)
         {
             Score = score;
             StarPower = starPower;
             HighWatermark = highWatermark;
+            SkillValues = null;
+        }
+
+        private FameProgress(short[] data) : this(data[80], data[81], data[82])
+        {
+            SkillValues = SkillFields.Select(x => data[(int)x]).ToArray();
+        }
+
+        public static FameProgress FromPersonData(short[] data)
+        {
+            if (data == null || data.Length <= 82) throw new ArgumentException("Missing Superstar person data.");
+            return new FameProgress(data);
         }
 
         public void ApplyTo(short[] personData)
@@ -25,6 +45,8 @@ namespace Simitone.Client.Utils
             personData[(int)VMPersonDataVariable.TS1FameScore] = Score;
             personData[(int)VMPersonDataVariable.TS1FameStarPower] = StarPower;
             personData[(int)VMPersonDataVariable.TS1FameStarHighWatermark] = HighWatermark;
+            if (SkillValues != null)
+                for (int i = 0; i < SkillValues.Length; i++) personData[(int)SkillFields[i]] = SkillValues[i];
         }
     }
 

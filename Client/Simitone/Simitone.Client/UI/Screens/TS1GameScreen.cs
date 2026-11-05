@@ -614,10 +614,8 @@ namespace Simitone.Client.UI.Screens
             var neighborhood = Content.Get().Neighborhood;
             var progress = FameProgressTransfer.CaptureFamily(ActiveFamily.FamilyGUIDs,
                 vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().Select(avatar =>
-                    new KeyValuePair<uint, FameProgress>(avatar.Object.OBJ.GUID, new FameProgress(
-                        avatar.GetPersonData(VMPersonDataVariable.TS1FameScore),
-                        avatar.GetPersonData(VMPersonDataVariable.TS1FameStarPower),
-                        avatar.GetPersonData(VMPersonDataVariable.TS1FameStarHighWatermark)))));
+                    new KeyValuePair<uint, FameProgress>(avatar.Object.OBJ.GUID,
+                        FameProgress.FromPersonData(avatar.GetPersonDataClone()))));
             foreach (var entry in progress)
             {
                 var neighborID = neighborhood.GetNeighborIDForGUID(entry.Key);

@@ -17,6 +17,7 @@ using FSO.Client;
 using FSO.Client.UI.Framework;
 using Simitone.Client.UI.Model;
 using FSO.Client.UI.Controls;
+using Simitone.Client.Superstar;
 
 namespace Simitone.Client.UI.Panels.LiveSubpanels
 {
@@ -89,9 +90,19 @@ namespace Simitone.Client.UI.Panels.LiveSubpanels
             var neighbour = sel.GetPersonData(VMPersonDataVariable.NeighborId);
 
             var n = neighbourhood.GetNeighborByID(neighbour);
+            if (n?.Relationships == null) return;
             var rel = n.Relationships;
 
-            var rItems = rel.Select(x => new Tuple<int,int>(neighbour, x.Key)).ToList();
+            var rItems = rel.Where(x =>
+            {
+                var other = neighbourhood.GetNeighborByID((short)x.Key);
+                if (other == null) return false;
+                if (RelSort == 0) return FameFriendships.IsMutualFriend(n, other, SuperstarRuntime.Rules?.FriendshipThreshold ?? 50);
+                if (RelSort == 1) return n.PersonData?.Length > 61 && other.PersonData?.Length > 61 &&
+                    n.PersonData[61] > 0 && n.PersonData[61] == other.PersonData[61];
+                if (RelSort == 2) return other.PersonData?.Length > 81 && other.PersonData[81] > 0;
+                return true;
+            }).Select(x => new Tuple<int,int>(neighbour, x.Key)).ToList();
 
             bool difference = false;
             if (rItems.Count == Items.Count)

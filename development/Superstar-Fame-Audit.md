@@ -1,5 +1,10 @@
 # Superstar fame workflow audit
 
+The historical baseline findings below are retained for traceability. The
+current branch now supplies experimental native fame handlers, UI, persistence
+and an isolated Windows test bundle; see [Superstar-Preview.md](Superstar-Preview.md)
+for implemented behaviour, explicit policies and the in-game verification matrix.
+
 ## Scope and evidence
 
 Reviewed Simitone baseline `03b3f03` and pinned FreeSO `d8a3c175`, plus the user's
