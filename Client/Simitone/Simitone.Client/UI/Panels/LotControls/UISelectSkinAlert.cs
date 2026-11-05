@@ -16,6 +16,7 @@ using FSO.SimAntics.NetPlay.Model;
 using FSO.Vitaboy;
 using Microsoft.Xna.Framework;
 using Simitone.Client.UI.Controls;
+using Simitone.Client.Utils;
 using Simitone.Client.UI.Panels.WorldUI;
 using System;
 using System.Collections.Generic;
@@ -202,16 +203,8 @@ namespace Simitone.Client.UI.Panels.LotControls
             ActiveBodyTex = bodies.Select(x => RemoveExt(texnames.FirstOrDefault(y => y.StartsWith(ExtractID(x, CurrentSkin))))).ToList();
             ActiveHandgroupTex = bodies.Select(x => (RemoveExt(texnames.FirstOrDefault(y => y == "huao" + FindHG(x))) ?? "huao" + CurrentSkin).Substring(4)).ToList();
 
-            for (int i = 0; i < ActiveBodies.Count; i++)
-            {
-                if (ActiveBodyTex[i] == null)
-                {
-                    ActiveBodyTex.RemoveAt(i);
-                    ActiveHandgroupTex.RemoveAt(i);
-                    ActiveBodies.RemoveAt(i--);
-                }
-            }
-            
+            ActiveBodies = SkinCatalog.FilterAvailable(bodies, ActiveBodyTex, ActiveHandgroupTex);
+
             BodyPositionLast = 0;
             PopulateReal();
         }
