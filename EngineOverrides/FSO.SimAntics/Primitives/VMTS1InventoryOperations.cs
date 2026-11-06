@@ -80,7 +80,6 @@ namespace FSO.SimAntics.Primitives
             {
                 case VMTS1InventoryMode.AddToken:
                     if (count < 0) return VMPrimitiveExitCode.GOTO_FALSE;
-                    if (count == 0) return VMPrimitiveExitCode.GOTO_TRUE;
                     inventory = InitInventory(neighbour, inventory);
                     //if we have an existing item add to that
                     var aitem = inventory.FirstOrDefault(x => x.GUID == guid && x.Type == type);

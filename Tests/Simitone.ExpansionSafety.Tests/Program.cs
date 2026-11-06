@@ -37,6 +37,11 @@ foreach(var mode in new[]{VMTS1InventoryMode.RemoveToken,VMTS1InventoryMode.Remo
 operand.Mode=VMTS1InventoryMode.AddToken;var maximum=Stack(65535);frame.Thread.TempRegisters[0]=1;
 Check(primitive.Execute(frame,operand)==VMPrimitiveExitCode.GOTO_FALSE && maximum[0].Count==65535,"addition overflowed");
 frame.Thread.TempRegisters[0]=-1;Check(primitive.Execute(frame,operand)==VMPrimitiveExitCode.GOTO_FALSE,"negative addition accepted");
+// Preserve the existing zero-count token semantics; only invalid ranges change.
+var zero=Stack(5);frame.Thread.TempRegisters[0]=0;
+Check(primitive.Execute(frame,operand)==VMPrimitiveExitCode.GOTO_TRUE && zero[0].Count==5,"zero addition changed an existing count");
+neighborhood.Inventories.Remove(1);primitive.Execute(frame,operand);
+Check(neighborhood.Inventories[1].Single().Count==0,"zero addition changed token creation semantics");
 foreach(var (mode,id) in new[]{(VMTS1InventoryMode.Temp0NeighborAsAutofollow,10u),(VMTS1InventoryMode.Temp0NeighborAsFollowHome,11u)}) {
  foreach(byte flags in new byte[]{0,2}) {
   var items=new List<InventoryItem>{new(){GUID=0,Type=2,Count=60},new(){GUID=1,Type=2,Count=70}};neighborhood.Inventories[1]=items;
