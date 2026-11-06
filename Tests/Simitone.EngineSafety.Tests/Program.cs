@@ -60,10 +60,15 @@ try {
     var broken=Character(0x5555);
     broken.AddChunk(new FailingChunk {ChunkID=2,ChunkType="FAIL",ChunkLabel="fault injection",ChunkProcessed=true});
     var beforeFailedSave=neighborhood.NextSim;
+    var beforeFailedFiles=Directory.GetFiles(characters).ToDictionary(p=>p,Hash);
     var brokenObj=new GameObject {GUID=0x5555,OBJ=broken.Get<OBJD>(1),Resource=new GameObjectResource(broken,null,null,"synthetic",content)};
     Reject(()=>neighborhood.SaveNewNeighbour(brokenObj),"real SaveNewNeighbour swallowed a serialization failure");
-    Check(neighborhood.NextSim==beforeFailedSave && !objects.Entries.ContainsKey(0x5555) &&
-        !File.Exists(Path.Combine(characters,"User"+beforeFailedSave.ToString("D5")+".iff")),"real failed save published a partial character or registration");
+    Check(neighborhood.NextSim==beforeFailedSave && !objects.Entries.ContainsKey(0x5555),
+        "real failed save changed allocation or registration");
+    Check(Directory.GetFiles(characters).Length==beforeFailedFiles.Count,
+        "real failed save published a partial character or leaked a temporary file");
+    foreach(var pair in beforeFailedFiles) Check(Hash(pair.Key)==pair.Value,
+        "real failed save changed an existing character file");
     var next=5;
     Reject(()=>CharacterFileStore.WriteNew(characters,ref next,stream=>{ stream.WriteByte(1); throw new IOException("injected serializer failure"); }),"serializer failure was swallowed");
     Check(next==5 && !File.Exists(Path.Combine(characters,"User00005.iff")) && !Directory.EnumerateFiles(characters,"*.tmp").Any(),"failed character write published partial state");
