@@ -1,6 +1,6 @@
 param(
     [string]$PublishDirectory = "publish/gameplay-win",
-    [string]$OutputDirectory = "release/Gameplay-Safety-Preview-Windows"
+    [string]$OutputDirectory = "release/Diagnostics-Preview-Windows"
 )
 $ErrorActionPreference = "Stop"
 $lib = Join-Path $OutputDirectory "lib"
@@ -26,6 +26,10 @@ if (Test-Path "$lib/runtimes") {
 }
 Copy-Item "packaging/superstar/Start-Gameplay-Preview.cmd" $OutputDirectory
 Copy-Item "packaging/superstar/README.txt" $OutputDirectory
+Copy-Item "packaging/superstar/Collect-Bug-Report.cmd" $OutputDirectory
+Copy-Item "packaging/superstar/Collect-Bug-Report.ps1" $OutputDirectory
+Copy-Item "development/Reporting-Bugs.md" $OutputDirectory
+Set-Content "$lib/preview-build.txt" "source=$env:SIMITONE_SOURCE_SHA run=$env:GITHUB_RUN_ID" -Encoding utf8
 Copy-Item "development/Superstar-Preview.md" $OutputDirectory
 Copy-Item "development/Gameplay-Test-Preview.md" $OutputDirectory
 Copy-Item "development/Safety-Preview.md" $OutputDirectory

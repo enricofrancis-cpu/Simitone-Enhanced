@@ -1,4 +1,4 @@
-Simitone Enhanced - experimental gameplay and safety preview (Windows x64)
+Simitone Enhanced - experimental gameplay, safety and diagnostics preview (Windows x64)
 
 1. Extract the ENTIRE archive into a NEW writable folder outside your Sims installation.
 2. Run Start-Gameplay-Preview.cmd inside Windows/Parallels.
@@ -21,3 +21,6 @@ level, expected/actual behavior and any SimAntics error. Other errors can be
 reported with the full displayed exception or screenshot.
 
 Source: https://github.com/enricofrancis-cpu/Simitone-Enhanced
+
+Bug reports: after an issue, close the game if possible and run Collect-Bug-Report.cmd.
+Send the generated ZIP plus the full error screenshot and steps. See Reporting-Bugs.md.

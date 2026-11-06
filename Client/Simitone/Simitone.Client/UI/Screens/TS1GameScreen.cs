@@ -463,6 +463,7 @@ namespace Simitone.Client.UI.Screens
 
             if (SwitchLot > 0)
             {
+                DiagnosticLog.Event("travel-request", "from=" + vm.GetGlobalValue(10) + "; to=" + SwitchLot);
                 SynchronizeFamilyFame();
                 if (!Downtown) SavedLot = vm.Save();
                 if (SwitchLot == ActiveFamily.HouseNumber && SavedLot != null)
@@ -636,6 +637,7 @@ namespace Simitone.Client.UI.Screens
             Driver = new VMServerDriver(globalLink);
 
             vm = new VM(new VMContext(World), Driver, new UIHeadlineRendererProvider());
+            vm.OnDialog += info => DiagnosticLog.SimAntics(info.Title, info.Message);
             vm.ListenBHAVChanges();
             vm.Init();
 
@@ -667,6 +669,7 @@ namespace Simitone.Client.UI.Screens
 
         public void InitializeLot(VMMarshal marshal)
         {
+            DiagnosticLog.Event("lot-load-home-snapshot");
             InitializeLot();
             vm.MyUID = 65537;
             vm.Load(marshal);
@@ -743,6 +746,7 @@ namespace Simitone.Client.UI.Screens
 
         public void InitializeLot(string lotName, bool external)
         {
+            DiagnosticLog.Event("lot-load-request", "file=" + Path.GetFileName(lotName) + "; external=" + external);
             if (lotName == "" || lotName[0] == '!') return;
             InitializeLot();
             
@@ -1006,6 +1010,13 @@ namespace Simitone.Client.UI.Screens
         }
 
         public void Save()
+        {
+            DiagnosticLog.Event("save-start", "lot=" + vm?.GetGlobalValue(10) + "; away=" + Downtown);
+            try { SaveCore(); DiagnosticLog.Event("save-complete"); }
+            catch (Exception error) { DiagnosticLog.Error("save-failed", error); throw; }
+        }
+
+        private void SaveCore()
         {
             SynchronizeFamilyFame();
             //save the house first
