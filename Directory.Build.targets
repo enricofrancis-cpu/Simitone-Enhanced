@@ -1,0 +1,16 @@
+<Project>
+  <!-- Compile explicit reviewed providers without editing or repinning FreeSO. -->
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.Content'">
+    <Compile Remove="TS1/TS1NeighbourProvider.cs;TS1/TS1BCFProvider.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)EngineOverrides/FSO.Content/**/*.cs" />
+    <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/TS1/TS1NeighbourProvider.cs"><ExpectedHash>4D363EA96D2BAAD9B3674017A376E5F41E6B99BE0BFB34AE51D9E1BD4A2BF379</ExpectedHash><ExpectedHashCRLF>5626EBC38D1ED370507E5D4460483E7DF5E97F16F9C3DB1D826B613F63C1904E</ExpectedHashCRLF></_EnhancedBaseSource>
+    <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/TS1/TS1BCFProvider.cs"><ExpectedHash>1F478A84BF7C4B47E86017ED43A98FFB0976BD814644F227030DE0ABF4829AF6</ExpectedHash><ExpectedHashCRLF>09C379FF9E18EED915183B213017599A344CB58311949D0262AA01784FC1C3B0</ExpectedHashCRLF></_EnhancedBaseSource>
+  </ItemGroup>
+  <Target Name="VerifyEnhancedProviderBase" BeforeTargets="CoreCompile" Condition="'$(MSBuildProjectName)' == 'FSO.Content'">
+    <GetFileHash Files="@(_EnhancedBaseSource)" Algorithm="SHA256">
+      <Output TaskParameter="Items" ItemName="_EnhancedBaseHash" />
+    </GetFileHash>
+    <Error Condition="'%(_EnhancedBaseHash.FileHash)' != '%(_EnhancedBaseHash.ExpectedHash)' And '%(_EnhancedBaseHash.FileHash)' != '%(_EnhancedBaseHash.ExpectedHashCRLF)'"
+           Text="Pinned FreeSO provider source changed. Review EngineOverrides against the new source before building: %(_EnhancedBaseHash.Identity)" />
+  </Target>
+</Project>
