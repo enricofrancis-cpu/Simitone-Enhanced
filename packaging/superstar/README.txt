@@ -1,4 +1,4 @@
-Simitone Enhanced - experimental gameplay, safety and diagnostics preview (Windows x64)
+Simitone Enhanced - experimental compatibility fixes preview (Windows x64)
 
 1. Extract the ENTIRE archive into a NEW writable folder outside your Sims installation.
 2. Run Start-Gameplay-Preview.cmd inside Windows/Parallels.
@@ -6,7 +6,12 @@ Simitone Enhanced - experimental gameplay, safety and diagnostics preview (Windo
 4. Use the new TestProfile created inside this extracted folder. Keep lib intact.
    Do not extract over the earlier preview or copy experimental saves into your normal profile.
 
-Includes: Superstar progression/UI/persistence and test tools; skin catalogue
+New fixes: native outfit catalogue preservation and current-outfit lookup; mixed-case
+loose content discovery; failed animation decode cache safety; inventory count bounds;
+follower tokens separated from saved motives; empty appearance selection protection.
+Read Compatibility-Fixes-Preview.md for targeted tests and limitations.
+
+Also includes: Superstar progression/UI/persistence and test tools; skin catalogue
 preservation; startup-safe custom clothing names; complete character discovery;
 non-overwriting new character files; staged first-profile imports; pet/baby naming dialog; unplaced family deletion cleanup; phone-book
 safety; per-lot weather files and repaired blueprint export paths. The .NET runtime

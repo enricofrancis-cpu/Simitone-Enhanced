@@ -184,7 +184,7 @@ namespace FSO.Content.TS1
                     var bcf = BCFProvider.Get(filename);
                     var anim = bcf.Animations.FirstOrDefault(x => x.Name.ToLowerInvariant() == name);
                     if (anim == null) return null;
-                    if (anim.Translations == null)
+                    if (anim.Translations == null || anim.Rotations == null)
                     {
                         //enrich animation with CFP
                         var cfp = CFPProvider.Get((anim.XSkillName + ".cfp").ToLowerInvariant());

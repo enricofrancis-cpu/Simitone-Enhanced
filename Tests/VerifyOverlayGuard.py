@@ -1,29 +1,32 @@
-"""Check the real MSBuild source guard without editing the FreeSO checkout."""
+"""Exercise all real MSBuild overlay source guards without editing FreeSO."""
 import argparse
 from pathlib import Path
 import subprocess
 import tempfile
 from xml.sax.saxutils import quoteattr
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--dotnet', default='dotnet')
-args = parser.parse_args()
-root = Path(__file__).resolve().parents[1]
-with tempfile.TemporaryDirectory(prefix='simitone-overlay-guard-') as temporary:
-    fixture = Path(temporary)
-    (fixture / 'TS1').mkdir()
-    project = fixture / 'FSO.Content.proj'
-    project.write_text('<Project><Import Project=' + quoteattr(str(root / 'Directory.Build.targets')) + '/></Project>')
-    for ending in (b'\n', b'\r\n'):
-        for name in ('TS1NeighbourProvider.cs', 'TS1BCFProvider.cs'):
-            original = (root / 'FreeSO/TSOClient/tso.content/TS1' / name).read_bytes()
-            (fixture / 'TS1' / name).write_bytes(original.replace(b'\r\n', b'\n').replace(b'\n', ending))
-        result = subprocess.run([args.dotnet, 'msbuild', str(project), '-t:VerifyEnhancedProviderBase', '-nologo'], text=True, capture_output=True)
-        if result.returncode:
-            raise RuntimeError('Unchanged provider rejected: ' + result.stdout + result.stderr)
-    source = fixture / 'TS1/TS1BCFProvider.cs'
-    source.write_bytes(source.read_bytes() + b'\n// synthetic changed source\n')
-    result = subprocess.run([args.dotnet, 'msbuild', str(project), '-t:VerifyEnhancedProviderBase', '-nologo'], text=True, capture_output=True)
-    if not result.returncode or 'Review EngineOverrides' not in result.stdout + result.stderr:
-        raise RuntimeError('Changed provider source was not rejected by the guard: ' + result.stdout + result.stderr)
-print('PASS: actual MSBuild guard accepts LF/CRLF originals and rejects changed provider source; submodule untouched.')
+parser=argparse.ArgumentParser(); parser.add_argument('--dotnet',default='dotnet'); args=parser.parse_args()
+root=Path(__file__).resolve().parents[1]
+groups={
+ 'FSO.Content': ('tso.content',['TS1/TS1NeighbourProvider.cs','TS1/TS1BCFProvider.cs','Framework/TS1Provider.cs']),
+ 'FSO.SimAntics': ('tso.simantics',['Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs']),
+ 'FSO.Vitaboy': ('tso.vitaboy.model',['CFP.cs'])
+}
+for project_name,(directory,names) in groups.items():
+ with tempfile.TemporaryDirectory(prefix='simitone-overlay-guard-') as temporary:
+  fixture=Path(temporary); project=fixture/(project_name+'.proj')
+  project.write_text('<Project><Import Project='+quoteattr(str(root/'Directory.Build.targets'))+'/></Project>')
+  def check():
+   return subprocess.run([args.dotnet,'msbuild',str(project),'-t:VerifyEnhancedProviderBase','-nologo'],text=True,capture_output=True)
+  for ending in (b'\n',b'\r\n'):
+   for name in names:
+    original=(root/'FreeSO/TSOClient'/directory/name).read_bytes().replace(b'\r\n',b'\n')
+    target=fixture/name;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(original.replace(b'\n',ending))
+   result=check()
+   if result.returncode: raise RuntimeError('Original rejected: '+result.stdout+result.stderr)
+  for name in names:
+   target=fixture/name;original=target.read_bytes();target.write_bytes(original+b'\n// synthetic changed source\n')
+   result=check()
+   if not result.returncode or 'Review EngineOverrides' not in result.stdout+result.stderr:
+    raise RuntimeError('Changed source accepted: '+name+' '+result.stdout+result.stderr)
+   target.write_bytes(original)
+print('PASS: all three project guards accept LF/CRLF originals and reject changes to all six overlaid sources; submodule untouched.')

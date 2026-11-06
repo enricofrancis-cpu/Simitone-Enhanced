@@ -38,3 +38,7 @@ Equal(new[] { "c" }, adjacentHands, "Adjacent companion alignment");
 Equal(Array.Empty<string>(), SkinCatalog.FilterAvailable(Array.Empty<string>(), new List<string>()),
     "Empty catalogue");
 Console.WriteLine("PASS: tone switching, catalogue preservation, texture/hand alignment, adjacent missing entries, empty/all/none available.");
+
+if (SkinCatalog.HasCompatibleSelection(null, catalog) || SkinCatalog.HasCompatibleSelection(catalog, Array.Empty<string>()) ||
+    !SkinCatalog.HasCompatibleSelection(catalog, new[]{"body"})) throw new Exception("CAS availability gate failed");
+Console.WriteLine("PASS: CAS availability gates reject missing/empty catalogues and accept populated selections.");

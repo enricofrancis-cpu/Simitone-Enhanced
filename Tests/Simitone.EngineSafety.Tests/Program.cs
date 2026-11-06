@@ -130,6 +130,34 @@ try {
     Check(File.ReadAllText(Path.Combine(racingDestination,"Neighborhood.iff"))=="other import won" &&
         !Directory.EnumerateDirectories(Path.GetDirectoryName(racingDestination),".simitone-import-*").Any(),"concurrent import replaced destination data or leaked staging");
     foreach(var pair in originals) Check(Hash(pair.Key)==pair.Value,"original neighbourhood files changed");
+    // Exercise discovery through the actual engine, including files that must not be opened as FAR archives.
+    content.TS1BasePath=root + Path.DirectorySeparatorChar;
+    content.TS1AllFiles=new[]{"GameData/Skins/lower.cmx","GameData/Skins/upper.CMX","gamedata/skins/folder.cmx",
+        "GameData/Skins/lower.cfp","GameData/Skins/upper.CFP","Downloads/lower.iff","Downloads/upper.IFF",
+        "GameData/Skins/ignored.cmx.backup","Downloads/ignored.iff.bak","Downloads/not-an-archive.far.backup"};
+    var discovery=new TS1Provider(content); discovery.Init();
+    Check(discovery.BuildDictionary(".cmx","globals").Keys.Order().SequenceEqual(new[]{"folder.cmx","lower.cmx","upper.cmx"}),"mixed-case CMX discovery or backup exclusion failed");
+    Check(discovery.BuildDictionary(".cfp","globals").Keys.Order().SequenceEqual(new[]{"lower.cfp","upper.cfp"}),"mixed-case CFP discovery failed");
+    Check(discovery.BuildDictionary(".iff","globals").Keys.Order().SequenceEqual(new[]{"lower.iff","upper.iff"}),"mixed-case object discovery failed");
+    var animation=new Animation {Name="fixture-animation",XSkillName="fixture",TranslationCount=1,RotationCount=1};
+    var badCfp=new CFP {Data=Array.Empty<byte>()};
+    var animationProvider=new TS1BCFProvider(content,null) {
+        BCFProvider=new FixtureSubProvider<BCF>(new(){{"fixture.bcf",new FixtureReference(new BCF(Array.Empty<Skeleton>(),Array.Empty<Appearance>(),new[]{animation}))}}),
+        CFPProvider=new FixtureSubProvider<CFP>(new(){{"fixture.cfp",new FixtureReference(badCfp)}})
+    };
+    animationProvider.Init();
+    for(int retry=0;retry<2;retry++) {
+        Reject(()=>animationProvider.Get("fixture-animation.anim",typeof(Animation)),"truncated CFP returned an incomplete cached animation");
+        Check(animation.Translations==null && animation.Rotations==null,"failed decoder published partial arrays");
+    }
+    using(var output=new MemoryStream()) {
+        using(var writer=new BinaryWriter(output,System.Text.Encoding.UTF8,true))
+            foreach(float value in new[]{1f,2f,3f,0f,0f,0f,1f}) {writer.Write((byte)255);writer.Write(value);}
+        badCfp.Data=output.ToArray();
+    }
+    var validAnimation=(Animation)animationProvider.Get("fixture-animation.anim",typeof(Animation));
+    Check(validAnimation.Translations[0].X==-1 && validAnimation.Translations[0].Y==2 && validAnimation.Rotations[0].W==-1,"valid CFP retry failed");
+    Console.WriteLine("PASS: actual engine mixed-case discovery/backup exclusion and atomic CFP enrichment with failed retries and valid recovery.");
     Console.WriteLine("PASS: real engine character load/save and BCF catalogue initialization; overwrite/failure/case protection; staged import recovery and original/existing-save preservation (synthetic files, no game assets).");
 } finally { if(Directory.Exists(root)) Directory.Delete(root,true); }
 

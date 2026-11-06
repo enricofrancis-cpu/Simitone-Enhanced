@@ -4,6 +4,9 @@ namespace Simitone.Client.Utils
 {
     internal static class SkinCatalog
     {
+        public static bool HasCompatibleSelection(ICollection<string> heads, ICollection<string> bodies)
+            => heads != null && bodies != null && heads.Count > 0 && bodies.Count > 0;
+
         // Texture availability depends on the selected skin tone. Never remove
         // entries from the shared BCF catalogue while building a UI selection.
         public static List<string> FilterAvailable(IEnumerable<string> catalog,

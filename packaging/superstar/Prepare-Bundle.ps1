@@ -1,6 +1,6 @@
 param(
     [string]$PublishDirectory = "publish/gameplay-win",
-    [string]$OutputDirectory = "release/Diagnostics-Preview-Windows"
+    [string]$OutputDirectory = "release/Compatibility-Fixes-Preview-Windows"
 )
 $ErrorActionPreference = "Stop"
 $lib = Join-Path $OutputDirectory "lib"
@@ -43,3 +43,5 @@ foreach ($required in @("Simitone.exe", "Simitone.dll", "Simitone.runtimeconfig.
 if (Test-Path "$OutputDirectory/TestProfile") { throw "Do not package personal test saves." }
 if (Test-Path "$lib/GameData") { throw "Do not package original game assets." }
 Write-Host "Self-contained gameplay preview prepared at $OutputDirectory"
+
+Copy-Item "development/Compatibility-Fixes-Preview.md" $OutputDirectory
