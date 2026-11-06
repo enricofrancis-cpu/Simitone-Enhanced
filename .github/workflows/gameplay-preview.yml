@@ -1,0 +1,64 @@
+name: Compatibility fixes preview checks
+
+on:
+  pull_request:
+    branches: [enhanced-development]
+  workflow_dispatch:
+
+env:
+  SIMITONE_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Generate MonoGame projects
+        shell: pwsh
+        run: |
+          Set-Location FreeSO/Other/libs/FSOMonoGame
+          ./protobuild.exe --generate
+      - name: Verify engine overlay source guard
+        run: python Tests/VerifyOverlayGuard.py
+      - name: Verify empty CAS selection
+        run: python Tests/VerifyCasEmpty.py
+      - name: Build Windows Release
+        run: dotnet build Client/Simitone/Simitone.Windows/Simitone.Windows.csproj -c Release
+      - name: Build and run all nine regression suites
+        shell: pwsh
+        run: |
+          foreach ($suite in @("Compatibility", "Dialog", "Fame", "Family", "Phonebook", "LotFiles", "EngineSafety", "Diagnostics", "ExpansionSafety")) {
+            $project = "Tests/Simitone.$suite.Tests"
+            dotnet build $project -c Release
+            if ($LASTEXITCODE -ne 0) { throw "$suite build failed" }
+            dotnet run --project $project -c Release --no-build
+            if ($LASTEXITCODE -ne 0) { throw "$suite regressions failed" }
+          }
+      - name: Verify bug report collector
+        shell: pwsh
+        run: ./Tests/Verify-BugReportCollector.ps1
+      - name: Publish self-contained Windows preview
+        run: >-
+          dotnet publish Client/Simitone/Simitone.Windows/Simitone.Windows.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishAot=false -p:PublishTrimmed=false -p:ErrorOnDuplicatePublishOutputFiles=false
+          -p:SimitonePreviewBundle=true
+          -o publish/gameplay-win
+      - name: Prepare isolated test bundle
+        shell: pwsh
+        run: ./packaging/superstar/Prepare-Bundle.ps1
+      - name: Upload playable Windows preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: Simitone-Enhanced-Compatibility-Fixes-Preview-Windows-x64
+          path: release/Compatibility-Fixes-Preview-Windows/
+          if-no-files-found: error
+          retention-days: 30

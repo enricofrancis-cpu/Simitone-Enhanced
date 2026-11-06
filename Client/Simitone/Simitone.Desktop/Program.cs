@@ -65,7 +65,7 @@ namespace Simitone.Windows
                 }
             }
             userDir = userDir.Replace('\\', '/');
-            FSOEnvironment.UserDir = userDir;
+            FSOEnvironment.UserDir = Simitone.Client.Utils.PreviewProfile.Resolve(args, userDir, baseDir);
             Directory.CreateDirectory(FSOEnvironment.UserDir);
 
             ILocator gameLocator;

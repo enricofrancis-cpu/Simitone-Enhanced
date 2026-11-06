@@ -1,6 +1,6 @@
-﻿using FSO.Client.UI.Framework;
+using FSO.Client.UI.Framework;
 using FSO.Content;
-using FSO.LotView.Model;
+using FSO.Files.Formats.IFF.Chunks;
 using FSO.SimAntics;
 using FSO.SimAntics.Model;
 using Simitone.Client.UI.Controls;
@@ -55,15 +55,17 @@ namespace Simitone.Client.UI.Panels.LotControls
             VM = vm;
             var nb = Content.Get().Neighborhood;
             var neigh = nb.GetNeighborByID(callerNID);
-            var rels = neigh.Relationships.Keys;
+            var rels = neigh?.Relationships?.Keys.AsEnumerable() ?? Enumerable.Empty<int>();
             //var rels = nb.Neighbors.NeighbourByID.Keys;
 
             foreach (var to in rels)
             {
+                // Relationship keys can outlive a deleted neighbour. Never wrap an
+                // invalid key into another Sim's short neighbour ID.
+                if (to <= 0 || to > short.MaxValue) continue;
                 var tn = nb.GetNeighborByID((short)to);
-                var family = tn.PersonData?.ElementAt((int)VMPersonDataVariable.TS1FamilyNumber) ?? 0;
-                var gender = tn.PersonData?.ElementAt((int)VMPersonDataVariable.Gender) ?? 0; //can't call pets
-                if (family != 0 && gender < 2)
+                var family = GetCallableFamily(tn);
+                if (family != 0)
                 {
                     List<short> famList = null;
                     if (!NeighborsByFamilyID.TryGetValue(family, out famList))
@@ -78,7 +80,8 @@ namespace Simitone.Client.UI.Panels.LotControls
 
             FamilyList = new UITouchStringList();
             FamilyList.Size = new Microsoft.Xna.Framework.Vector2(320, 350);
-            FamilyList.BackingList = NeighborsByFamilyID.Select(x => nb.GetFamilyString((ushort)x.Key).GetString(0)).ToList();
+            FamilyList.BackingList = NeighborsByFamilyID.Select(x =>
+                nb.GetFamilyString((ushort)x.Key)?.GetString(0) ?? "Unknown family").ToList();
             FamilyList.Refresh();
             FamilyList.OnSelectionChange += FamilyList_OnSelectionChange;
             Add(FamilyList);
@@ -99,33 +102,60 @@ namespace Simitone.Client.UI.Panels.LotControls
             CallButton = new UIBigButton(true);
             CallButton.Caption = "Call";
             CallButton.Position = new Microsoft.Xna.Framework.Vector2(370 + 385, 255);
-            CallButton.OnButtonClick += (btn) => { OnResult?.Invoke(SelectedNeighbour); };
+            CallButton.OnButtonClick += (btn) =>
+            {
+                if (SelectedFamily >= 0 && SelectedFamily < NeighborsByFamilyID.Count &&
+                    SelectedNeighbour > 0 && GetCallableFamily(nb.GetNeighborByID(SelectedNeighbour)) ==
+                    NeighborsByFamilyID.ElementAt(SelectedFamily).Key)
+                    OnResult?.Invoke(SelectedNeighbour);
+                else NeighbourList_OnSelectionChange(-1);
+            };
             CallButton.Width = 275;
             Add(CallButton);
 
-            NeighbourList_OnSelectionChange((NeighborsByFamilyID.Count==0)?-2:-1);
+            NeighbourList_OnSelectionChange(-1);
 
             OnResult += (res) => { CallButton.Disabled = true; cancelButton.Disabled = true; };
+        }
+
+        private static short GetCallableFamily(Neighbour neighbor)
+        {
+            var data = neighbor?.PersonData;
+            var familyIndex = (int)VMPersonDataVariable.TS1FamilyNumber;
+            var genderIndex = (int)VMPersonDataVariable.Gender;
+            if (data == null || data.Length <= Math.Max(familyIndex, genderIndex) ||
+                data[familyIndex] <= 0 || data[genderIndex] < 0 || data[genderIndex] >= 2) return 0;
+            var family = Content.Get().Neighborhood.GetFamily((ushort)data[familyIndex]);
+            // Reject stale links to deleted/reused families, as well as pets.
+            return family?.FamilyGUIDs?.Contains(neighbor.GUID) == true ? data[familyIndex] : (short)0;
         }
 
         private void NeighbourList_OnSelectionChange(int obj)
         {
             if (Icon != null) { Remove(Icon); Icon = null; }
-            if (obj == -1)
-            {
-                SelectedNeighbour = -1;
-                CallButton.Disabled = true;
-            } else
-            {
-                SelectedNeighbour = NeighborsByFamilyID.ElementAt(SelectedFamily).Value[obj];
-                CallButton.Disabled = false;
+            SelectedNeighbour = -1;
+            CallButton.Disabled = true;
+            if (SelectedFamily < 0 || SelectedFamily >= NeighborsByFamilyID.Count) return;
+            var selected = NeighborsByFamilyID.ElementAt(SelectedFamily);
+            if (obj < 0 || obj >= selected.Value.Count) return;
+            var neighbor = Content.Get().Neighborhood.GetNeighborByID(selected.Value[obj]);
+            if (GetCallableFamily(neighbor) != selected.Key) return;
 
-                var guid = Content.Get().Neighborhood.GetNeighborByID(SelectedNeighbour).GUID;
-                var temp = VM.Context.CreateObjectInstance(guid, LotTilePos.OUT_OF_WORLD, Direction.NORTH, true);
-                Icon = new UIAvatarSelectButton(UIIconCache.GetObject(temp.BaseObject));
+            SelectedNeighbour = selected.Value[obj];
+            CallButton.Disabled = false;
+            try
+            {
+                // Render off-lot contacts outside the live simulation. A missing
+                // custom appearance must not prevent calling an otherwise valid Sim.
+                var head = UIIconCache.GetNeighbor(neighbor.GUID);
+                if (head == null) return;
+                Icon = new UIAvatarSelectButton(head);
                 Icon.Position = new Microsoft.Xna.Framework.Vector2(892, 60);
                 Add(Icon);
-                temp.Delete(VM.Context);
+            }
+            catch (Exception error) when (!(error is OutOfMemoryException))
+            {
+                Console.Error.WriteLine("Phone-book portrait unavailable for " + neighbor.GUID + ": " + error.Message);
             }
         }
 
@@ -133,22 +163,17 @@ namespace Simitone.Client.UI.Panels.LotControls
         {
             var nb = Content.Get().Neighborhood;
             //populate the rightmost list with the selected family
-            NeighbourList.BackingList.Clear();
-            if (obj != -1)
+            SelectedFamily = (obj >= 0 && obj < NeighborsByFamilyID.Count) ? obj : -1;
+            NeighbourList_OnSelectionChange(-1);
+            NeighbourList.BackingList = new List<string>();
+            if (SelectedFamily >= 0)
             {
-                var people = NeighborsByFamilyID.ElementAt(obj).Value;
+                var people = NeighborsByFamilyID.ElementAt(SelectedFamily).Value;
                 NeighbourList.BackingList = 
-                    people.Select(x => {
-                        var guid = nb.GetNeighborByID(x).GUID;
-                        var gobj = Content.Get().WorldObjects.Get(guid);
-                        if (gobj == null) return "Unknown";
-                        return gobj.Resource.Get<FSO.Files.Formats.IFF.Chunks.CTSS>(gobj.OBJ.CatalogStringsID)?.GetString(0) ?? "Unknown";
-                        }
-                    ).ToList();
+                    people.Select(x => nb.GetNeighborByID(x)?.Name ?? "Unknown").ToList();
             }
             NeighbourList.Refresh();
             NeighbourList_OnSelectionChange(-1);
-            SelectedFamily = obj;
         }
     }
 }
