@@ -1,4 +1,4 @@
-name: Combined gameplay preview checks
+name: Gameplay safety preview checks
 
 on:
   pull_request:
@@ -23,12 +23,14 @@ jobs:
         run: |
           Set-Location FreeSO/Other/libs/FSOMonoGame
           ./protobuild.exe --generate
+      - name: Verify engine overlay source guard
+        run: python Tests/VerifyOverlayGuard.py
       - name: Build Windows Release
         run: dotnet build Client/Simitone/Simitone.Windows/Simitone.Windows.csproj -c Release
-      - name: Build and run all six regression suites
+      - name: Build and run all seven regression suites
         shell: pwsh
         run: |
-          foreach ($suite in @("Compatibility", "Dialog", "Fame", "Family", "Phonebook", "LotFiles")) {
+          foreach ($suite in @("Compatibility", "Dialog", "Fame", "Family", "Phonebook", "LotFiles", "EngineSafety")) {
             $project = "Tests/Simitone.$suite.Tests"
             dotnet build $project -c Release
             if ($LASTEXITCODE -ne 0) { throw "$suite build failed" }
@@ -48,7 +50,7 @@ jobs:
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Gameplay-Preview-Windows-x64
-          path: release/Gameplay-Preview-Windows/
+          name: Simitone-Enhanced-Gameplay-Safety-Preview-Windows-x64
+          path: release/Gameplay-Safety-Preview-Windows/
           if-no-files-found: error
           retention-days: 30

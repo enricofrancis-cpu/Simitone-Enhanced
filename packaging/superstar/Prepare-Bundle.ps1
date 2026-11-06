@@ -1,6 +1,6 @@
 param(
     [string]$PublishDirectory = "publish/gameplay-win",
-    [string]$OutputDirectory = "release/Gameplay-Preview-Windows"
+    [string]$OutputDirectory = "release/Gameplay-Safety-Preview-Windows"
 )
 $ErrorActionPreference = "Stop"
 $lib = Join-Path $OutputDirectory "lib"
@@ -28,6 +28,7 @@ Copy-Item "packaging/superstar/Start-Gameplay-Preview.cmd" $OutputDirectory
 Copy-Item "packaging/superstar/README.txt" $OutputDirectory
 Copy-Item "development/Superstar-Preview.md" $OutputDirectory
 Copy-Item "development/Gameplay-Test-Preview.md" $OutputDirectory
+Copy-Item "development/Safety-Preview.md" $OutputDirectory
 Copy-Item "FreeSO/LICENSE.md" "$OutputDirectory/FreeSO-LICENSE.md"
 Copy-Item "FreeSO/Other/libs/FSOMonoGame/LICENSE.txt" "$OutputDirectory/MonoGame-LICENSE.txt"
 foreach ($required in @("Simitone.exe", "Simitone.dll", "Simitone.runtimeconfig.json", "coreclr.dll",
