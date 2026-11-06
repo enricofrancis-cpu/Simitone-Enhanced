@@ -562,6 +562,7 @@ namespace Simitone.Client.UI.Screens
 
         private void Accept(UIElement button)
         {
+            if (Mode == UICASMode.SimEdit && !HasAppearanceChoices) return;
             switch (Mode)
             {
                 case UICASMode.SimEdit:

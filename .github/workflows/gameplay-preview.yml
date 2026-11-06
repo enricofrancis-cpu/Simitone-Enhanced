@@ -28,6 +28,8 @@ jobs:
           ./protobuild.exe --generate
       - name: Verify engine overlay source guard
         run: python Tests/VerifyOverlayGuard.py
+      - name: Verify empty CAS selection
+        run: python Tests/VerifyCasEmpty.py
       - name: Build Windows Release
         run: dotnet build Client/Simitone/Simitone.Windows/Simitone.Windows.csproj -c Release
       - name: Build and run all nine regression suites

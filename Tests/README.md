@@ -24,8 +24,8 @@ meshes whose textures exist for only one skin tone, alongside stock content.
 4. Check stock heads/clothes and child/pet selection for regressions.
 
 This fix preserves selection catalogues; it does not add missing textures or repair
-malformed meshes, object scripts, or animation data. Empty-selection UI handling is
-outside its scope.
+malformed meshes, object scripts, or animation data. The compatibility-fixes edition also guards empty-selection indexing, randomization
+and acceptance; the unavailable-content message still needs visual in-game verification.
 
 ## Upstream review
 
@@ -44,3 +44,12 @@ clothing selector's body list alias `TS1ClothingCollection.ClothesByAvatarType`.
 Filtering missing textures therefore permanently removed entries from shared
 content for the running session. `GeneralAvatarType` already returns a new body
 list; it now uses the same filter to keep all selection paths consistent.
+
+## Compatibility-fixes edition
+
+Run `dotnet run --project Tests/Simitone.ExpansionSafety.Tests -c Release` for
+source-linked outfit/inventory regressions with VM/content doubles and real NGBH
+serialization. `python Tests/VerifyCasEmpty.py` compiles the current CAS head setter
+against small doubles to exercise null/empty lists and valid index wrapping.
+The actual engine project tests discovery and failed CFP retries in EngineSafety.
+Windows CI runs all nine suites, both probes and the collector check before packaging.
