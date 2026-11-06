@@ -4,7 +4,9 @@ var root=Path.Combine(Path.GetTempPath(),"simitone-diag-test-"+Guid.NewGuid().To
 try {
  Directory.CreateDirectory(root);
  File.WriteAllText(Path.Combine(root,"save-sentinel.iff"),"must survive");
- for(int i=0;i<7;i++) { DiagnosticLog.Start(root,"synthetic-build"); DiagnosticLog.Event("test"); }
+ var created=new List<string>();
+ for(int i=0;i<7;i++) { DiagnosticLog.Start(root,"synthetic-build"); created.Add(DiagnosticLog.SessionDirectory); DiagnosticLog.Event("test"); }
+ Check(created.Skip(2).All(Directory.Exists) && created.Take(2).All(x=>!Directory.Exists(x)),"newest session retention order failed");
  Check(Directory.GetDirectories(Path.Combine(root,"Diagnostics"),"session-*").Length==5,"retention failed");
  var foreign=Path.Combine(root,"Diagnostics","session-000000-foreign"); Directory.CreateDirectory(foreign); File.WriteAllText(Path.Combine(foreign,"keep"),"preserve");
  DiagnosticLog.Start(root,"synthetic-build");

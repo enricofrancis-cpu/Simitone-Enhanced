@@ -34,7 +34,7 @@ namespace Simitone.Client.Utils
                     {
                         try { Directory.Delete(old, true); } catch (Exception) { }
                     }
-                    Session = Path.Combine(root, "session-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
+                    Session = Path.Combine(root, "session-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fffffff") + "-" + Guid.NewGuid().ToString("N"));
                     Directory.CreateDirectory(Session);
                     File.WriteAllText(Path.Combine(Session, ".simitone-diagnostics"), "1");
                     Event("session-start", "build=" + build + "; client=" + typeof(DiagnosticLog).Assembly.GetName().Version +
