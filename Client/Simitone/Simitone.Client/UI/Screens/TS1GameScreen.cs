@@ -637,7 +637,7 @@ namespace Simitone.Client.UI.Screens
             Driver = new VMServerDriver(globalLink);
 
             vm = new VM(new VMContext(World), Driver, new UIHeadlineRendererProvider());
-            vm.OnDialog += info => DiagnosticLog.SimAntics(info.Title, info.Message);
+            vm.OnDialog += info => DiagnosticLog.SimAntics(info?.Title, info?.Message);
             vm.ListenBHAVChanges();
             vm.Init();
 
