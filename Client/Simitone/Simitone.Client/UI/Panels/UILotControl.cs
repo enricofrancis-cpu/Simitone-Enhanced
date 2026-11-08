@@ -831,12 +831,12 @@ namespace Simitone.Client.UI.Panels
 
 
             //update plumbbob
-            var plumb = Content.Get().RCMeshes.Get("arrow.fsom");
+            var plumb = Content.Get().RCMeshes.Get("classic-plumbob.fsom");
             foreach (VMAvatar avatar in vm.Context.ObjectQueries.Avatars)
             {
                 if (avatar.Avatar == null) continue;
                 var isActive = (avatar == ActiveEntity);
-                if ((avatar.Avatar.HeadObject == plumb) != isActive)
+                if (plumb != null && (avatar.Avatar.HeadObject == plumb) != isActive)
                 {
                     avatar.Avatar.HeadObject = (avatar == ActiveEntity) ? plumb : null;
                     avatar.Avatar.HeadObjectSpeedyVel = 0.2f;
