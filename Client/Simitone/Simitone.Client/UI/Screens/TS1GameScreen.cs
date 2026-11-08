@@ -463,19 +463,50 @@ namespace Simitone.Client.UI.Screens
 
             if (SwitchLot > 0)
             {
-                if (!Downtown) SavedLot = vm.Save();
-                if (SwitchLot == ActiveFamily.HouseNumber && SavedLot != null)
+                var destination = SwitchLot;
+                SwitchLot = -1;
+                DiagnosticLog.Event("travel-request", "from=" + vm.GetGlobalValue(10) + "; to=" + destination);
+                var returningHome = destination == ActiveFamily?.HouseNumber;
+                var destinationPath = Content.Get().Neighborhood.GetHousePath(destination);
+                try
                 {
-                    Downtown = false;
+                    if (!(returningHome && SavedLot != null) && !File.Exists(destinationPath))
+                        throw new FileNotFoundException("Destination lot is missing.", destinationPath);
+
+                    if (!Downtown && !returningHome)
+                    {
+                        Save();
+                        SavedLot = vm.Save();
+                        DiagnosticLog.Event("travel-home-saved", "destination=" + destination);
+                    }
+                    else SynchronizeFamilyFame();
+                }
+                catch (Exception error)
+                {
+                    DiagnosticLog.Error("travel-preparation-failed", error);
+                    vm.SpeedMultiplier = 1;
+                    ShowTravelError("Travel was canceled. The destination or the home save could not be prepared.");
+                    return;
+                }
+
+                Downtown = !returningHome;
+                if (returningHome && SavedLot != null)
+                {
                     InitializeLot(SavedLot);
                     SavedLot = null;
                 }
                 else
                 {
-                    Downtown = true;
-                    InitializeLot(Content.Get().Neighborhood.GetHousePath(SwitchLot), false);
+                    InitializeLot(destinationPath, false);
+                    if (Downtown && VMTS1VacationArrival.IsVacationLot(destination) &&
+                        vm.GetGlobalValue(3) == 0 && SavedLot != null)
+                    {
+                        Downtown = false;
+                        InitializeLot(SavedLot);
+                        SavedLot = null;
+                        ShowTravelError("The traveling household could not be placed at the vacation lot. The game returned home.");
+                    }
                 }
-                SwitchLot = -1;
             }
             //vm.Context.Clock.Hours = 12;
             if (vm != null) vm.Update();
@@ -607,6 +638,22 @@ namespace Simitone.Client.UI.Screens
 
         private VMMarshal SavedLot;
 
+        private void SynchronizeFamilyFame()
+        {
+            if (ActiveFamily == null || vm == null) return;
+            var neighborhood = Content.Get().Neighborhood;
+            var progress = FameProgressTransfer.CaptureFamily(ActiveFamily.FamilyGUIDs,
+                vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().Select(avatar =>
+                    new KeyValuePair<uint, FameProgress>(avatar.Object.OBJ.GUID,
+                        FameProgress.FromPersonData(avatar.GetPersonDataClone()))));
+            foreach (var entry in progress)
+            {
+                var neighborID = neighborhood.GetNeighborIDForGUID(entry.Key);
+                if (neighborID.HasValue) entry.Value.ApplyTo(neighborhood.GetNeighborByID(neighborID.Value)?.PersonData);
+            }
+            if (Downtown) FameProgressTransfer.ApplyToHome(SavedLot, progress);
+        }
+
         public void InitializeLot()
         {
             CleanupLastWorld();
@@ -619,6 +666,7 @@ namespace Simitone.Client.UI.Screens
             Driver = new VMServerDriver(globalLink);
 
             vm = new VM(new VMContext(World), Driver, new UIHeadlineRendererProvider());
+            vm.OnDialog += info => DiagnosticLog.SimAntics(info?.Title, info?.Message);
             vm.ListenBHAVChanges();
             vm.Init();
 
@@ -650,10 +698,12 @@ namespace Simitone.Client.UI.Screens
 
         public void InitializeLot(VMMarshal marshal)
         {
+            DiagnosticLog.Event("lot-load-home-snapshot");
             InitializeLot();
             vm.MyUID = 65537;
             vm.Load(marshal);
 
+            ActiveFamily?.SelectWholeFamily();
             vm.TS1State.ActivateFamily(vm, ActiveFamily);
 
             var settings = GlobalSettings.Default;
@@ -726,6 +776,7 @@ namespace Simitone.Client.UI.Screens
 
         public void InitializeLot(string lotName, bool external)
         {
+            DiagnosticLog.Event("lot-load-request", "file=" + Path.GetFileName(lotName) + "; external=" + external);
             if (lotName == "" || lotName[0] == '!') return;
             InitializeLot();
             
@@ -737,17 +788,17 @@ namespace Simitone.Client.UI.Screens
                     vm.TS1State.ActivateFamily(vm, ActiveFamily);
                 }
                 BlueprintReset(lotName, null);
+                if (Downtown && VMTS1VacationArrival.IsVacationLot(vm.GetGlobalValue(10)))
+                {
+                    var traveler = Content.Get().Neighborhood.GameState.DowntownSimGUID;
+                    var arrival = VMTS1VacationArrival.Prepare(vm, ActiveFamily, traveler);
+                    DiagnosticLog.Event("travel-vacation-arrival",
+                        "lot=" + vm.GetGlobalValue(10) + "; traveler=" + traveler + "; selected=" + (arrival?.ObjectID ?? 0));
+                }
                 // Read saved weather state now; apply it deferred in UpdateWeatherEffects
                 // once Blueprint is available (BlueprintReset queues a command, so Blueprint
                 // may still be null when this line runs).
-                short pendingWeather = (short)(1 << 8);
-                var weatherPath = Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.weather");
-                if (File.Exists(weatherPath))
-                {
-                    var bytes = File.ReadAllBytes(weatherPath);
-                    if (bytes.Length >= 2) pendingWeather = BitConverter.ToInt16(bytes, 0);
-                }
-                PendingWeatherData = pendingWeather;
+                PendingWeatherData = LotFileState.ReadWeather(lotName);
 
                 if (vm.LoadErrors.Count > 0) GameThread.NextUpdate((state) => ShowLoadErrors(vm.LoadErrors, true));
 
@@ -909,6 +960,16 @@ namespace Simitone.Client.UI.Screens
             }
         }
 
+        private void ShowTravelError(string message)
+        {
+            UIScreen.GlobalShowDialog(new UIMobileAlert(new UIAlertOptions
+            {
+                Title = "Travel",
+                Message = message,
+                Buttons = UIAlertButton.Ok()
+            }), true);
+        }
+
         private void VMLotSwitch(uint lotId)
         {
             vm.SpeedMultiplier = 0;
@@ -931,8 +992,8 @@ namespace Simitone.Client.UI.Screens
             if (vm == null) return;
 
             var exporter = new VMWorldExporter();
-            Directory.CreateDirectory(Path.Combine(FSOEnvironment.UserDir, "Blueprints/cas.xml"));
-            exporter.SaveHouse(vm, Path.Combine(FSOEnvironment.UserDir, "Blueprints/cas.xml"));
+            var blueprintPath = LotFileState.PrepareBlueprintPath(FSOEnvironment.UserDir);
+            exporter.SaveHouse(vm, blueprintPath);
             var marshal = vm.Save();
             Directory.CreateDirectory(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/"));
             using (var output = new FileStream(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.fsov"), FileMode.Create))
@@ -940,7 +1001,7 @@ namespace Simitone.Client.UI.Screens
                 marshal.SerializeInto(new BinaryWriter(output));
             }
             var weatherData = vm.Context.Blueprint?.Weather?.WeatherData ?? (short)(1 << 8);
-            File.WriteAllBytes(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.weather"), BitConverter.GetBytes(weatherData));
+            LotFileState.WriteWeather(blueprintPath, weatherData);
         }
 
         private UIMobileAlert CloseAlert;
@@ -997,6 +1058,14 @@ namespace Simitone.Client.UI.Screens
 
         public void Save()
         {
+            DiagnosticLog.Event("save-start", "lot=" + vm?.GetGlobalValue(10) + "; away=" + Downtown);
+            try { SaveCore(); DiagnosticLog.Event("save-complete"); }
+            catch (Exception error) { DiagnosticLog.Error("save-failed", error); throw; }
+        }
+
+        private void SaveCore()
+        {
+            SynchronizeFamilyFame();
             //save the house first
             var iff = new IffFile();
             vm.TS1State.UpdateSIMI(vm);
@@ -1038,8 +1107,7 @@ namespace Simitone.Client.UI.Screens
 
             // Write weather sidecar alongside the save
             var weatherData = vm.Context.Blueprint?.Weather?.WeatherData ?? (short)(1 << 8);
-            Directory.CreateDirectory(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/"));
-            File.WriteAllBytes(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.weather"), BitConverter.GetBytes(weatherData));
+            LotFileState.WriteWeather(Content.Get().Neighborhood.GetHousePath(vm.GetGlobalValue(10)), weatherData);
         }
 
         public PNG GeneratePNG(Texture2D data)

@@ -110,6 +110,7 @@ namespace Simitone.Client.UI.Panels
         private List<UICategory> OptionsCategories = new List<UICategory>()
         {
             new UICategory() { ID = 0, IconName = "cat_build_arch.png" },
+            new UICategory() { ID = 1, IconName = "mode_options.png" },
         };
 
         public UIMainPanel(TS1GameScreen game) : base()
@@ -269,6 +270,16 @@ namespace Simitone.Client.UI.Panels
                     panel = new UIBuyBrowsePanel(Game, (sbyte)obj, UICatalogMode.Build);
                     break;
                 case UIMainPanelMode.OPTIONS:
+                    if (obj == 1)
+                    {
+                        panel = new UIButtonSubpanel(Game, new UICatFunc[] {
+                            new UICatFunc("Footprint shadows", "opt_freewill.png", () => SetLightingMode(2),
+                                () => FSO.LotView.WorldConfig.Current.LightingMode == 2),
+                            new UICatFunc("Mesh shadows", "opt_freewill.png", () => SetLightingMode(3),
+                                () => FSO.LotView.WorldConfig.Current.LightingMode == 3),
+                        });
+                        break;
+                    }
                     panel = new UIButtonSubpanel(Game, new UICatFunc[] {
                         new UICatFunc(GameFacade.Strings.GetString("145", "3"), "opt_save.png", () => { Game.Save(); }),
                         new UICatFunc(GameFacade.Strings.GetString("145", "1"), "opt_neigh.png", () => { Game.ReturnToNeighbourhood(); }),
@@ -513,9 +524,12 @@ namespace Simitone.Client.UI.Panels
             PanelActive = false;
         }
 
-        public void ShowSelect()
+        public bool ShowSelect()
         {
-            var add = new UISwitchAvatarPanel(Game);
+            var avatars = UISwitchAvatarPanel.GetSelectableAvatars(Game.vm);
+            if (avatars.Length == 0) return false;
+
+            var add = new UISwitchAvatarPanel(Game, avatars);
             Add(add);
 
             SetSubpanel(null);
@@ -535,6 +549,21 @@ namespace Simitone.Client.UI.Panels
                 ShowingSelect = false;
                 OnEndSelect?.Invoke();
             };
+            return true;
+        }
+
+        private void SetLightingMode(int mode)
+        {
+            var config = FSO.LotView.WorldConfig.Current;
+            if (config.LightingMode != mode)
+            {
+                config.LightingMode = mode;
+                Game.LotControl.World.ChangedWorldConfig(GameFacade.GraphicsDevice);
+                GlobalSettings.Default.LightingMode = mode;
+                GlobalSettings.Default.Save();
+            }
+
+
         }
 
         private void AddFreeWillToggle(UISubpanel parent)
@@ -594,3 +623,4 @@ namespace Simitone.Client.UI.Panels
         OPTIONS
     }
 }
+

@@ -31,6 +31,7 @@ namespace Simitone.Client.UI.Panels.LiveSubpanels
         }
         public UIButtonSubpanel(TS1GameScreen game, UICatFunc[] funcs) : base(game)
         {
+            var selectors = new List<(UICatButton Button, Func<bool> Selected)>();
             for (int i = 0; i < funcs.Length; i++)
             {
                 var func = funcs[i];
@@ -47,7 +48,14 @@ namespace Simitone.Client.UI.Panels.LiveSubpanels
                 Add(label);
 
                 var subbutton = new UICatButton(Content.Get().CustomUI.Get(func.IconName).Get(GameFacade.GraphicsDevice));
-                subbutton.OnButtonClick += (btn) => { func.Func(); };
+                if (func.IsSelected != null)
+                    selectors.Add((subbutton, func.IsSelected));
+                subbutton.OnButtonClick += (btn) =>
+                {
+                    func.Func();
+                    foreach (var selector in selectors)
+                        selector.Button.Selected = selector.Selected();
+                };
                 subbutton.Position = new Vector2(-50, 16);
                 Add(subbutton);
 
@@ -56,6 +64,8 @@ namespace Simitone.Client.UI.Panels.LiveSubpanels
                 GameFacade.Screens.Tween.To(this, 0.5f, new Dictionary<string, float>() { { "InitShow", 1f } }, TweenQuad.EaseOut);
             }
 
+            foreach (var selector in selectors)
+                selector.Button.Selected = selector.Selected();
             InitShow = InitShow;
         }
     }
@@ -66,11 +76,14 @@ namespace Simitone.Client.UI.Panels.LiveSubpanels
         public string IconName;
         public Action Func;
 
-        public UICatFunc(string name, string iconName, Action func)
+        public Func<bool> IsSelected;
+
+        public UICatFunc(string name, string iconName, Action func, Func<bool> isSelected = null)
         {
             Name = name;
             IconName = iconName;
             Func = func;
+            IsSelected = isSelected;
         }
     }
 }

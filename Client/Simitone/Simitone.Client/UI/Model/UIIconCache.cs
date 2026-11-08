@@ -32,9 +32,13 @@ namespace Simitone.Client.UI.Model
             if (obj is VMAvatar)
             {
                 var ava = (VMAvatar)obj;
-                var headname = ava.HeadOutfit.Name;
-                if (headname == "") headname = ava.BodyOutfit.OftData.TS1TextureID;
-                var id = headname +":"+ ava.HeadOutfit.OftData.TS1TextureID;
+                var head = ava.HeadOutfit;
+                var body = ava.BodyOutfit;
+                if (ava.Avatar?.Skeleton?.GetBone("HEAD") == null) return null;
+
+                var id = $"{head?.Name}:{head?.OftData?.TS1AppearanceID}:{head?.OftData?.TS1TextureID}:" +
+                         $"{body?.OftData?.TS1AppearanceID}:{body?.OftData?.TS1TextureID}:{ava.SkinTone}";
+                if (head == null && body == null) return null;
 
                 Texture2D result = null;
                 if (!AvatarHeadCache.TryGetValue(id, out result))
