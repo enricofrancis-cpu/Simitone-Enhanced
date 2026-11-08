@@ -273,8 +273,10 @@ namespace Simitone.Client.UI.Panels
                     if (obj == 1)
                     {
                         panel = new UIButtonSubpanel(Game, new UICatFunc[] {
-                            new UICatFunc("Footprint shadows", "mode_options.png", () => SetLightingMode(2)),
-                            new UICatFunc("Mesh shadows", "mode_options.png", () => SetLightingMode(3)),
+                            new UICatFunc("Footprint shadows", "opt_freewill.png", () => SetLightingMode(2),
+                                () => FSO.LotView.WorldConfig.Current.LightingMode == 2),
+                            new UICatFunc("Mesh shadows", "opt_freewill.png", () => SetLightingMode(3),
+                                () => FSO.LotView.WorldConfig.Current.LightingMode == 3),
                         });
                         break;
                     }
@@ -561,14 +563,7 @@ namespace Simitone.Client.UI.Panels
                 GlobalSettings.Default.Save();
             }
 
-            UIMobileAlert alert = null;
-            alert = new UIMobileAlert(new UIAlertOptions
-            {
-                Title = "Graphics",
-                Message = mode == 3 ? "Mesh shadows enabled." : "Footprint shadows enabled.",
-                Buttons = UIAlertButton.Ok(_ => UIScreen.RemoveDialog(alert)),
-            });
-            UIScreen.GlobalShowDialog(alert, true);
+
         }
 
         private void AddFreeWillToggle(UISubpanel parent)

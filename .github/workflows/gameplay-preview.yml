@@ -1,4 +1,4 @@
-name: Interaction feedback and graphics preview checks
+name: Stability preview checks
 
 on:
   pull_request:
@@ -36,6 +36,8 @@ jobs:
         run: python Tests/VerifyStudioTownPreview.py
       - name: Verify Sim selector on away lots
         run: python Tests/VerifySimSelector.py
+      - name: Verify stability regressions
+        run: python Tests/VerifyStabilityPreview.py
       - name: Build Windows Release
         run: dotnet build Client/Simitone/Simitone.Windows/Simitone.Windows.csproj -c Release
       - name: Build and run all nine regression suites
@@ -60,12 +62,12 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Interaction-Feedback-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Stability-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Interaction-Feedback-Preview-Windows-x64
-          path: release/Interaction-Feedback-Preview-Windows/
+          name: Simitone-Enhanced-Stability-Preview-Windows-x64
+          path: release/Stability-Preview-Windows/
           if-no-files-found: error
           retention-days: 30
 

@@ -172,12 +172,22 @@ namespace FSO.Content.TS1
             return AnimHostBCF.Keys.Select(x => AnimRealCase[x]+".anim").ToList();
         }
 
+        internal static string ResourceKey(string name, string extension)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+            name = name.Trim();
+            if (name.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                name = name.Substring(0, name.Length - extension.Length);
+            return name.ToLowerInvariant();
+        }
+
         public object Get(string name, Type expected)
         {
-            if (name == null) return null;
+            if (string.IsNullOrWhiteSpace(name)) return null;
             if (expected == typeof(Animation))
             {
-                name = name.Substring(0, name.Length - 5).ToLowerInvariant(); //remove .anim
+                name = ResourceKey(name, ".anim");
+                if (name.Length == 0) return null;
                 string filename = null;
                 if (AnimHostBCF.TryGetValue(name, out filename))
                 {
@@ -197,7 +207,8 @@ namespace FSO.Content.TS1
             }
             else if (expected == typeof(Appearance))
             {
-                name = name.Substring(0, name.Length - 4).ToLowerInvariant(); //remove .apr
+                name = ResourceKey(name, ".apr");
+                if (name.Length == 0) return null;
                 string filename = null;
                 if (SkinHostBCF.TryGetValue(name, out filename))
                 {
@@ -209,7 +220,8 @@ namespace FSO.Content.TS1
             }
             else if (expected == typeof(Skeleton))
             {
-                name = name.Substring(0, name.Length - 5).ToLowerInvariant(); //remove .skel
+                name = ResourceKey(name, ".skel");
+                if (name.Length == 0) return null;
                 string filename = null;
                 if (SkelHostBCF.TryGetValue(name, out filename))
                 {

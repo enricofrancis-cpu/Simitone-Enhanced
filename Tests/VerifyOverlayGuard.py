@@ -8,8 +8,8 @@ parser=argparse.ArgumentParser(); parser.add_argument('--dotnet',default='dotnet
 root=Path(__file__).resolve().parents[1]
 groups={
  'FSO.Content': ('tso.content',['TS1/TS1NeighbourProvider.cs','TS1/TS1BCFProvider.cs','Framework/TS1Provider.cs']),
- 'FSO.SimAntics': ('tso.simantics',['Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs','Primitives/VMGenericTS1Call.cs','Engine/VMThread.cs']),
- 'FSO.LotView': ('tso.world',['Components/ObjectComponent.cs']),
+ 'FSO.SimAntics': ('tso.simantics',['Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs','Primitives/VMGenericTS1Call.cs','Engine/VMThread.cs','Engine/VMSuitProvider.cs','Entities/VMAvatar.cs','Primitives/VMShowString.cs','NetPlay/Model/Commands/VMNetChangeControlCmd.cs']),
+ 'FSO.LotView': ('tso.world',['Components/ObjectComponent.cs','LMap/LMapBatch.cs']),
  'FSO.Vitaboy': ('tso.vitaboy.model',['CFP.cs'])
 }
 for project_name,(directory,names) in groups.items():
@@ -30,4 +30,4 @@ for project_name,(directory,names) in groups.items():
    if not result.returncode or 'Review EngineOverrides' not in result.stdout+result.stderr:
     raise RuntimeError('Changed source accepted: '+name+' '+result.stdout+result.stderr)
    target.write_bytes(original)
-print('PASS: all four project guards accept LF/CRLF originals and reject changes to all nine overlaid sources; submodule untouched.')
+print('PASS: all four project guards accept LF/CRLF originals and reject changes to every overlaid source; submodule untouched.')

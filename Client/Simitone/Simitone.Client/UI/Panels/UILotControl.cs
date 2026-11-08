@@ -94,7 +94,8 @@ namespace Simitone.Client.UI.Panels
         private VMEntity HoverActor;
         private TimeSpan NextHoverRefresh;
         private VMMultitileGroup HighlightedGroup;
-        private bool FoundMe; //if false and avatar changes, center. Should center on join lot.
+        private bool CenteredOnLot;
+        private bool CenteredOnHousehold;
 
         public bool RMBScroll;
         private int RMBScrollX;
@@ -832,59 +833,37 @@ namespace Simitone.Client.UI.Panels
                 WorldConfig.Current.SmoothZoom = false;
             }
             
-            if (ActiveEntity == null || ActiveEntity.Dead || ActiveEntity.PersistID != SelectedSimID)
+            var familyMembers = vm.TS1State.CurrentFamily?.RuntimeSubset;
+            var selected = vm.GetAvatarByPersist(SelectedSimID);
+            if (selected == null || selected.Dead || familyMembers?.Contains(selected.Object.OBJ.GUID) != true)
             {
-                ActiveEntity = vm.Entities.FirstOrDefault(x => x is VMAvatar && x.PersistID == SelectedSimID); //try and hook onto a sim if we have none selected.
-                //if (ActiveEntity == null) ActiveEntity = vm.Entities.FirstOrDefault(x => x is VMAvatar);
+                selected = null;
+                var householdAvatar = vm.Context.ObjectQueries.Avatars.FirstOrDefault(avatar =>
+                    !avatar.Dead && familyMembers?.Contains(avatar.Object.OBJ.GUID) == true &&
+                    avatar.Position != LotTilePos.OUT_OF_WORLD);
+                if (householdAvatar != null)
+                    vm.SendCommand(new VMNetChangeControlCmd { TargetID = householdAvatar.ObjectID });
+            }
+            ActiveEntity = selected;
+            Queue.QueueOwner = ActiveEntity;
 
-                if (!FoundMe && ActiveEntity != null)
-                {
-                    // Send change control command to ensure sim is properly selected
-                    // This sets PersistID, registers in ObjectQueries, sets Global 3, and centers camera
-                    vm.SendCommand(new VMNetChangeControlCmd() { TargetID = ActiveEntity.ObjectID });
-                    FoundMe = true;
-                }
-
-                // Fallback: if no sim with expected PersistID, take control of any available avatar
-                if (!FoundMe && ActiveEntity == null && vm.Context.ObjectQueries.Avatars.Count > 0)
-                {
-                    var fallbackAvatar = vm.Context.ObjectQueries.Avatars.FirstOrDefault();
-                    if (fallbackAvatar != null)
-                    {
-                        // Send change control command to properly select this sim
-                        // This sets PersistID, registers in ObjectQueries, sets Global 3, and centers camera
-                        vm.SendCommand(new VMNetChangeControlCmd() { TargetID = fallbackAvatar.ObjectID });
-                        FoundMe = true;
-                    }
-                }
-
-                // Fallback for empty lots (no avatars): center on mailbox, any placed object, or lot center
-                if (!FoundMe && vm.Context.ObjectQueries.Avatars.Count == 0)
-                {
-                    // Try to find mailbox first (GUIDs: 0xEF121974 or 0x1D95C9B0)
-                    var landmark = vm.Entities.FirstOrDefault(x => x.Object.OBJ.GUID == 0xEF121974 || x.Object.OBJ.GUID == 0x1D95C9B0);
-
-                    // If no mailbox, try to find any object that's placed on the lot (for community lots)
-                    if (landmark == null)
-                    {
-                        landmark = vm.Entities.FirstOrDefault(x => x.Position != LotTilePos.OUT_OF_WORLD && x.Position.Level == 1);
-                    }
-
-                    if (landmark != null)
-                    {
-                        vm.Context.World.State.CenterTile = new Vector2(landmark.VisualPosition.X, landmark.VisualPosition.Y);
-                    }
-                    else
-                    {
-                        // Default to lot center
-                        var lotSize = vm.Context.Architecture.Width;
-                        vm.Context.World.State.CenterTile = new Vector2(lotSize / 2f, lotSize / 2f);
-                    }
-                    vm.Context.World.State.ScrollAnchor = null;
-                    FoundMe = true;
-                }
-
-                Queue.QueueOwner = ActiveEntity;
+            if (!CenteredOnHousehold && selected != null && selected.Position != LotTilePos.OUT_OF_WORLD &&
+                selected.WorldUI != null && selected.WorldUI.Room != 0 && selected.WorldUI.Room != 65531)
+            {
+                World.CenterTo(selected.WorldUI);
+                CenteredOnHousehold = CenteredOnLot = true;
+            }
+            if (!CenteredOnLot)
+            {
+                var mailbox = vm.Entities.FirstOrDefault(entity =>
+                    entity.Position != LotTilePos.OUT_OF_WORLD &&
+                    (entity.Object.OBJ.GUID == 0xEF121974 || entity.Object.OBJ.GUID == 0x1D95C9B0));
+                var architecture = vm.Context.Architecture;
+                World.State.CenterTile = mailbox == null
+                    ? new Vector2(architecture.Width / 2f, architecture.Height / 2f)
+                    : new Vector2(mailbox.VisualPosition.X, mailbox.VisualPosition.Y);
+                World.State.ScrollAnchor = null;
+                CenteredOnLot = true;
             }
 
             if (GotoObject == null) GotoObject = vm.Context.CreateObjectInstance(GOTO_GUID, LotTilePos.OUT_OF_WORLD, Direction.NORTH, true).Objects[0];

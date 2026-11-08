@@ -98,14 +98,14 @@ namespace Simitone.Client.UI.Panels.WorldUI
             if (Sprite != null)
             {
                 var bigFrame = (BGSprite != null) ? BGSprite.Frames[ZoomFrame].GetTexture(GameFacade.GraphicsDevice) : Sprite.Frames[ZoomFrame].GetTexture(GameFacade.GraphicsDevice);
-                if (bigFrame.Width == 0) return;
+                if (bigFrame == null || bigFrame.Width == 0) return;
                 Texture = new RenderTarget2D(GameFacade.GraphicsDevice, Math.Max(1,bigFrame.Width), Math.Max(1,bigFrame.Height));
             }
             else if (Headline.Operand.Group == VMSetBalloonHeadlineOperandGroup.Algorithmic && LastZoom != WorldZoom.Far)
             {
                 AlgTex = (Headline.IconTarget == null)?WhitePx:Headline.IconTarget.GetIcon(GameFacade.GraphicsDevice, (int)LastZoom - 1);
                 var bigFrame = (BGSprite != null) ? BGSprite.Frames[ZoomFrame].GetTexture(GameFacade.GraphicsDevice) : AlgTex;
-                if (bigFrame.Width == 0) return;
+                if (bigFrame == null || bigFrame.Width == 0) return;
                 Texture = new RenderTarget2D(GameFacade.GraphicsDevice, bigFrame.Width, bigFrame.Height);
             }
             else AlgTex = null;

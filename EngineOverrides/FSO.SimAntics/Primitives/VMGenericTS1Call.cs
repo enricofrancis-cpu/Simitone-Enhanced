@@ -98,13 +98,18 @@ namespace FSO.SimAntics.Primitives
                     //-1 is this family's home lot
                     var switchLotId = (uint)context.Thread.TempRegisters[0];
                     var vacation = switchLotId >= 40 && switchLotId < 50;
+                    var travelFamily = context.VM.TS1State.CurrentFamily;
+                    if (travelFamily == null || !(context.Caller is VMAvatar traveler) ||
+                        travelFamily.RuntimeSubset?.Contains(traveler.Object.OBJ.GUID) != true)
+                        return VMPrimitiveExitCode.GOTO_FALSE;
+
                     var crossData = Content.Content.Get().Neighborhood.GameState;
-                    crossData.ActiveFamily = context.VM.TS1State.CurrentFamily;
-                    crossData.DowntownSimGUID = context.Caller.Object.OBJ.GUID;
+                    crossData.ActiveFamily = travelFamily;
+                    crossData.DowntownSimGUID = traveler.Object.OBJ.GUID;
                     crossData.LotTransitInfo = (vacation) ? (short)1 : context.VM.GetGlobalValue(34);
                     var people = new List<VMAvatar>();
 
-                    people.Add((VMAvatar)context.Caller);
+                    people.Add(traveler);
                     if (crossData.LotTransitInfo >= 1)
                     {
                         foreach (VMAvatar person in context.VM.Context.ObjectQueries.Avatars)
@@ -242,7 +247,12 @@ namespace FSO.SimAntics.Primitives
                         //(blimp, though 1 is still set for whole family when theres only one person in it!)
 
                         context.VM.TS1State.VerifyFamily(context.VM);
-                        context.VM.SendCommand(new VMNetChangeControlCmd() { TargetID = context.VM.Context.ObjectQueries.GetObjectsByGUID(crossData2.DowntownSimGUID).FirstOrDefault()?.ObjectID ?? 0 });
+                        var party = crossData2.ActiveFamily.RuntimeSubset;
+                        var arrival = context.VM.Context.ObjectQueries.Avatars.FirstOrDefault(avatar =>
+                            !avatar.Dead && party.Contains(avatar.Object.OBJ.GUID) &&
+                            avatar.Object.OBJ.GUID == crossData2.DowntownSimGUID);
+                        if (arrival != null)
+                            context.VM.SendCommand(new VMNetChangeControlCmd { TargetID = arrival.ObjectID });
                     }
                     else
                     {
