@@ -463,6 +463,8 @@ namespace Simitone.Client.UI.Screens
 
             if (SwitchLot > 0)
             {
+                DiagnosticLog.Event("travel-request", "from=" + vm.GetGlobalValue(10) + "; to=" + SwitchLot);
+                SynchronizeFamilyFame();
                 if (!Downtown) SavedLot = vm.Save();
                 if (SwitchLot == ActiveFamily.HouseNumber && SavedLot != null)
                 {
@@ -607,6 +609,22 @@ namespace Simitone.Client.UI.Screens
 
         private VMMarshal SavedLot;
 
+        private void SynchronizeFamilyFame()
+        {
+            if (ActiveFamily == null || vm == null) return;
+            var neighborhood = Content.Get().Neighborhood;
+            var progress = FameProgressTransfer.CaptureFamily(ActiveFamily.FamilyGUIDs,
+                vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().Select(avatar =>
+                    new KeyValuePair<uint, FameProgress>(avatar.Object.OBJ.GUID,
+                        FameProgress.FromPersonData(avatar.GetPersonDataClone()))));
+            foreach (var entry in progress)
+            {
+                var neighborID = neighborhood.GetNeighborIDForGUID(entry.Key);
+                if (neighborID.HasValue) entry.Value.ApplyTo(neighborhood.GetNeighborByID(neighborID.Value)?.PersonData);
+            }
+            if (Downtown) FameProgressTransfer.ApplyToHome(SavedLot, progress);
+        }
+
         public void InitializeLot()
         {
             CleanupLastWorld();
@@ -619,6 +637,7 @@ namespace Simitone.Client.UI.Screens
             Driver = new VMServerDriver(globalLink);
 
             vm = new VM(new VMContext(World), Driver, new UIHeadlineRendererProvider());
+            vm.OnDialog += info => DiagnosticLog.SimAntics(info?.Title, info?.Message);
             vm.ListenBHAVChanges();
             vm.Init();
 
@@ -650,6 +669,7 @@ namespace Simitone.Client.UI.Screens
 
         public void InitializeLot(VMMarshal marshal)
         {
+            DiagnosticLog.Event("lot-load-home-snapshot");
             InitializeLot();
             vm.MyUID = 65537;
             vm.Load(marshal);
@@ -726,6 +746,7 @@ namespace Simitone.Client.UI.Screens
 
         public void InitializeLot(string lotName, bool external)
         {
+            DiagnosticLog.Event("lot-load-request", "file=" + Path.GetFileName(lotName) + "; external=" + external);
             if (lotName == "" || lotName[0] == '!') return;
             InitializeLot();
             
@@ -740,14 +761,7 @@ namespace Simitone.Client.UI.Screens
                 // Read saved weather state now; apply it deferred in UpdateWeatherEffects
                 // once Blueprint is available (BlueprintReset queues a command, so Blueprint
                 // may still be null when this line runs).
-                short pendingWeather = (short)(1 << 8);
-                var weatherPath = Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.weather");
-                if (File.Exists(weatherPath))
-                {
-                    var bytes = File.ReadAllBytes(weatherPath);
-                    if (bytes.Length >= 2) pendingWeather = BitConverter.ToInt16(bytes, 0);
-                }
-                PendingWeatherData = pendingWeather;
+                PendingWeatherData = LotFileState.ReadWeather(lotName);
 
                 if (vm.LoadErrors.Count > 0) GameThread.NextUpdate((state) => ShowLoadErrors(vm.LoadErrors, true));
 
@@ -931,8 +945,8 @@ namespace Simitone.Client.UI.Screens
             if (vm == null) return;
 
             var exporter = new VMWorldExporter();
-            Directory.CreateDirectory(Path.Combine(FSOEnvironment.UserDir, "Blueprints/cas.xml"));
-            exporter.SaveHouse(vm, Path.Combine(FSOEnvironment.UserDir, "Blueprints/cas.xml"));
+            var blueprintPath = LotFileState.PrepareBlueprintPath(FSOEnvironment.UserDir);
+            exporter.SaveHouse(vm, blueprintPath);
             var marshal = vm.Save();
             Directory.CreateDirectory(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/"));
             using (var output = new FileStream(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.fsov"), FileMode.Create))
@@ -940,7 +954,7 @@ namespace Simitone.Client.UI.Screens
                 marshal.SerializeInto(new BinaryWriter(output));
             }
             var weatherData = vm.Context.Blueprint?.Weather?.WeatherData ?? (short)(1 << 8);
-            File.WriteAllBytes(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.weather"), BitConverter.GetBytes(weatherData));
+            LotFileState.WriteWeather(blueprintPath, weatherData);
         }
 
         private UIMobileAlert CloseAlert;
@@ -997,6 +1011,14 @@ namespace Simitone.Client.UI.Screens
 
         public void Save()
         {
+            DiagnosticLog.Event("save-start", "lot=" + vm?.GetGlobalValue(10) + "; away=" + Downtown);
+            try { SaveCore(); DiagnosticLog.Event("save-complete"); }
+            catch (Exception error) { DiagnosticLog.Error("save-failed", error); throw; }
+        }
+
+        private void SaveCore()
+        {
+            SynchronizeFamilyFame();
             //save the house first
             var iff = new IffFile();
             vm.TS1State.UpdateSIMI(vm);
@@ -1038,8 +1060,7 @@ namespace Simitone.Client.UI.Screens
 
             // Write weather sidecar alongside the save
             var weatherData = vm.Context.Blueprint?.Weather?.WeatherData ?? (short)(1 << 8);
-            Directory.CreateDirectory(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/"));
-            File.WriteAllBytes(Path.Combine(FSOEnvironment.UserDir, "LocalHouse/cas.weather"), BitConverter.GetBytes(weatherData));
+            LotFileState.WriteWeather(Content.Get().Neighborhood.GetHousePath(vm.GetGlobalValue(10)), weatherData);
         }
 
         public PNG GeneratePNG(Texture2D data)
