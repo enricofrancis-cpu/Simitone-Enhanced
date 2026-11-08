@@ -80,6 +80,13 @@ namespace Simitone.Client.UI.Panels
             }
         }
 
+        internal static string GetLotTitle(string name, string streetCaption, int houseID)
+        {
+            if (!string.IsNullOrWhiteSpace(name)) return name;
+            if (!string.IsNullOrWhiteSpace(streetCaption)) return streetCaption;
+            return $"Lot {houseID}";
+        }
+
         public UIHouseSelectPanel(int houseID)
         {
             var screen = GameFacade.Screens.CurrentUIScreen;
@@ -101,21 +108,22 @@ namespace Simitone.Client.UI.Panels
             var house = neigh.GetHouse(houseID);
 
             var street = neigh.StreetNames;
-            var assignment = street.Get<STR>(2001).GetString(houseID - 1);
+            var assignment = street?.Get<STR>(2001)?.GetString(houseID - 1);
+            var streetCaption = int.TryParse(assignment, out var streetName) && streetName > 0
+                ? street.Get<STR>(2000)?.GetString(streetName - 1)?.Replace("%s", houseID.ToString())
+                : null;
 
-            int streetName;
-            if (int.TryParse(assignment, out streetName))
+            if (!string.IsNullOrWhiteSpace(streetCaption))
             {
                 StreetTitle = new UILabel();
                 StreetTitle.Position = new Vector2(30, 94 + extra - 64);
                 InitLabel(StreetTitle);
                 StreetTitle.CaptionStyle.Color = UIStyle.Current.BtnActive;
-                StreetTitle.Caption = street.Get<STR>(2000).GetString(streetName - 1).Replace("%s", houseID.ToString());
+                StreetTitle.Caption = streetCaption;
             }
 
             var nameDesc = neigh.GetHouseNameDesc(houseID);
-            var name = nameDesc.Item1;
-            if (name == "") name = StreetTitle.Caption;
+            var name = GetLotTitle(nameDesc.Item1, streetCaption, houseID);
 
             LotTitle = new UILabel();
             LotTitle.Position = new Vector2(30, 122 + extra - 64);

@@ -1,4 +1,4 @@
-name: CAS mesh safety preview checks
+name: Studio Town and catalog preview checks
 
 on:
   pull_request:
@@ -32,6 +32,8 @@ jobs:
         run: python Tests/VerifyCasEmpty.py
       - name: Verify dialog diagnostics callbacks
         run: python Tests/VerifyDialogDiagnostics.py
+      - name: Verify lot title fallback and plumbob asset
+        run: python Tests/VerifyStudioTownPreview.py
       - name: Build Windows Release
         run: dotnet build Client/Simitone/Simitone.Windows/Simitone.Windows.csproj -c Release
       - name: Build and run all nine regression suites
@@ -56,11 +58,11 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/CAS-Mesh-Safety-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Studio-Town-Catalog-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-CAS-Mesh-Safety-Preview-Windows-x64
-          path: release/CAS-Mesh-Safety-Preview-Windows/
+          name: Simitone-Enhanced-Studio-Town-Catalog-Preview-Windows-x64
+          path: release/Studio-Town-Catalog-Preview-Windows/
           if-no-files-found: error
           retention-days: 30
