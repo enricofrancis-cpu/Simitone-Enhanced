@@ -8,10 +8,11 @@
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Framework/TS1Provider.cs"><ExpectedHash>98ACA96046C5C7BCA584F60098949BF0CEA39F3A1BEDF693CE4083686380D14B</ExpectedHash><ExpectedHashCRLF>E13C15C3A5F3547AD4F04BC8087E4324749991AB36E65478432D7DB04BA63AEB</ExpectedHashCRLF></_EnhancedBaseSource>
   </ItemGroup>
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.SimAntics'">
-    <Compile Remove="Utils/VMTS1PurchasableOutfitHelper.cs;Primitives/VMTS1InventoryOperations.cs" />
+    <Compile Remove="Utils/VMTS1PurchasableOutfitHelper.cs;Primitives/VMTS1InventoryOperations.cs;Primitives/VMGenericTS1Call.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)EngineOverrides/FSO.SimAntics/**/*.cs" />
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Utils/VMTS1PurchasableOutfitHelper.cs"><ExpectedHash>6D2110C7778CB643BDE94B28DAD1B9799149E59D0DE8B8E89C6B4D56B02B1289</ExpectedHash><ExpectedHashCRLF>D35299A932B23D2923B76B5692C9934897C2A9BC4C63CC38D4DA0362CD1C396E</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Primitives/VMTS1InventoryOperations.cs"><ExpectedHash>C19244AFE34D98FBBAF960749CC0C12B78613F605B903C08E980E837E7395110</ExpectedHash><ExpectedHashCRLF>C20C16C21727DE78123A20E28238D510CA070D24FCF9575D9B0C6BE895C3C487</ExpectedHashCRLF></_EnhancedBaseSource>
+    <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Primitives/VMGenericTS1Call.cs"><ExpectedHash>2FC6C1BE3D6A077A83CF8D18277D85694C8B4D67512A5C2EFDC21938F0EED3BB</ExpectedHash><ExpectedHashCRLF>1F7260F22CF32E624BABB6D33D449B7794EAE4133F7BC592A3BACE8F0E942274</ExpectedHashCRLF></_EnhancedBaseSource>
   </ItemGroup>
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.Vitaboy'">
     <Compile Remove="CFP.cs" />

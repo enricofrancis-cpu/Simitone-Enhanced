@@ -1,4 +1,4 @@
-name: Studio Town Sim selector preview checks
+name: Expansion interaction preview checks
 
 on:
   pull_request:
@@ -60,11 +60,11 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Studio-Town-Sim-Selector-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Expansion-Interaction-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Studio-Town-Sim-Selector-Preview-Windows-x64
-          path: release/Studio-Town-Sim-Selector-Preview-Windows/
+          name: Simitone-Enhanced-Expansion-Interaction-Preview-Windows-x64
+          path: release/Expansion-Interaction-Preview-Windows/
           if-no-files-found: error
           retention-days: 30

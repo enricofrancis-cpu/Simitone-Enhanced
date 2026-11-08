@@ -437,7 +437,14 @@ namespace Simitone.Client.UI.Panels
                 CustomControl.Modifiers &= ~mod;
         }
 
-        public void ShowPieMenu(Point pt, UpdateState state)
+        private Point ScreenToWorldPick(Point point)
+        {
+            var screen = GameFacade.Screens.CurrentUIScreen;
+            var middle = new Point(screen.ScreenWidth / 2, screen.ScreenHeight / 2);
+            return ((point - middle).ToVector2() / World.BackbufferScale).ToPoint() + middle;
+        }
+
+        public void ShowPieMenu(Point point, UpdateState state)
         {
             if (!LiveMode)
             {
@@ -453,6 +460,7 @@ namespace Simitone.Client.UI.Panels
             }
             if (PieMenu == null && ActiveEntity != null)
             {
+                var pt = ScreenToWorldPick(point);
                 VMEntity obj;
                 //get new pie menu, make new pie menu panel for it
                 var tilePos = World.EstTileAtPosWithScroll(new Vector2(pt.X, pt.Y) / FSOEnvironment.DPIScaleFactor);
@@ -470,9 +478,11 @@ namespace Simitone.Client.UI.Panels
 
                 var lot = vm.GetGlobalValue(10);
                 var studioTown = lot >= 81 && lot <= 90;
+                var vacation = lot >= 40 && lot < 50;
+                var clickEvent = studioTown ? "studio-town-click" : vacation ? "vacation-click" : null;
                 bool objSelected = ObjectHover > 0;
-                if (studioTown && !objSelected)
-                    DiagnosticLog.Event("studio-town-click", $"lot={lot}; tile={targetPos}; hit=none");
+                if (clickEvent != null && !objSelected)
+                    DiagnosticLog.Event(clickEvent, $"lot={lot}; tile={targetPos}; hit=none");
                 if (objSelected || (GotoObject.Position != LotTilePos.OUT_OF_WORLD && ObjectHover <= 0))
                 {
                     if (objSelected)
@@ -493,15 +503,16 @@ namespace Simitone.Client.UI.Panels
                     }
                     else if (obj != null)
                     {
+                        var clicked = obj;
                         obj = obj.MultitileGroup.GetInteractionGroupLeader(obj);
-                        var clickTarget = studioTown && objSelected && obj is VMGameObject
-                            ? $"lot={lot}; guid={obj.Object.OBJ.GUID:X8}; object={obj.Object.OBJ.ChunkLabel}"
+                        var clickTarget = clickEvent != null && objSelected && obj is VMGameObject && ActiveEntity is VMAvatar actor
+                            ? $"lot={lot}; hit={clicked.Object.OBJ.GUID:X8}; guid={obj.Object.OBJ.GUID:X8}; object={obj.Object.OBJ.ChunkLabel}; person-type={actor.GetPersonData(FSO.SimAntics.Model.VMPersonDataVariable.PersonType)}"
                             : null;
                         if (obj is VMGameObject && ((VMGameObject)obj).Disabled > 0)
                         {
                             var flags = ((VMGameObject)obj).Disabled;
                             if (clickTarget != null)
-                                DiagnosticLog.Event("studio-town-click", $"{clickTarget}; disabled={flags}");
+                                DiagnosticLog.Event(clickEvent, $"{clickTarget}; disabled={flags}");
 
                             if ((flags & VMGameObjectDisableFlags.ForSale) > 0)
                             {
@@ -523,7 +534,7 @@ namespace Simitone.Client.UI.Panels
                         {
                             var menu = obj.GetPieMenu(vm, ActiveEntity, false, true);
                             if (clickTarget != null)
-                                DiagnosticLog.Event("studio-town-click", $"{clickTarget}; menu-count={menu.Count}");
+                                DiagnosticLog.Event(clickEvent, $"{clickTarget}; menu-count={menu.Count}");
                             if (menu.Count != 0)
                             {
                                 HITVM.Get().PlaySoundEvent(UISounds.PieMenuAppear);
@@ -589,22 +600,17 @@ namespace Simitone.Client.UI.Panels
                 {
                     OldMX = state.MouseState.X;
                     OldMY = state.MouseState.Y;
-                    var newHover = World.GetObjectIDAtScreenPos(state.MouseState.X,
-                        state.MouseState.Y,
-                        GameFacade.GraphicsDevice);
+                    var pick = ScreenToWorldPick(new Point(OldMX, OldMY));
+                    var newHover = World.GetObjectIDAtScreenPos(pick.X, pick.Y, GameFacade.GraphicsDevice);
 
                     if (ObjectHover != newHover)
                     {
                         ObjectHover = newHover;
-                        if (ObjectHover > 0)
-                        {
-                            var obj = vm.GetObjectById(ObjectHover);
-                            if (obj != null)
-                            {
-                                var menu = obj.GetPieMenu(vm, ActiveEntity, false, true);
-                                InteractionsAvailable = (menu.Count > 0);
-                            }
-                        }
+                        var obj = vm.GetObjectById(ObjectHover);
+                        obj = obj?.MultitileGroup.GetInteractionGroupLeader(obj);
+                        InteractionsAvailable = obj != null
+                            && (obj is not VMGameObject gameObject || gameObject.Disabled == 0)
+                            && obj.GetPieMenu(vm, ActiveEntity, false, true).Count > 0;
                     }
 
                     if (!TipIsError) ShowTooltip = false;
@@ -948,7 +954,8 @@ namespace Simitone.Client.UI.Panels
                         if (deltaX < 5 && deltaY < 5 && LiveMode && ActiveEntity != null)
                         {
                             // It was a click - check if clicking on a household Sim
-                            var clickedObjId = World.GetObjectIDAtScreenPos(RMBScrollX, RMBScrollY, GameFacade.GraphicsDevice);
+                            var pick = ScreenToWorldPick(new Point(RMBScrollX, RMBScrollY));
+                            var clickedObjId = World.GetObjectIDAtScreenPos(pick.X, pick.Y, GameFacade.GraphicsDevice);
                             if (clickedObjId > 0)
                             {
                                 var clickedObj = vm.GetObjectById(clickedObjId);
