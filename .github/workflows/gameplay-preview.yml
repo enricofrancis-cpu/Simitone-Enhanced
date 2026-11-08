@@ -1,4 +1,4 @@
-name: Dialog fix preview checks
+name: CAS mesh safety preview checks
 
 on:
   pull_request:
@@ -56,11 +56,11 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Dialog-Fix-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/CAS-Mesh-Safety-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Dialog-Fix-Preview-Windows-x64
-          path: release/Dialog-Fix-Preview-Windows/
+          name: Simitone-Enhanced-CAS-Mesh-Safety-Preview-Windows-x64
+          path: release/CAS-Mesh-Safety-Preview-Windows/
           if-no-files-found: error
           retention-days: 30

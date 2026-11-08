@@ -181,6 +181,29 @@ namespace Simitone.Client.UI.Screens
         private bool MissingAppearanceShown;
         private bool HasAppearanceChoices => SkinCatalog.HasCompatibleSelection(ActiveHeads, ActiveBodies);
 
+        private static bool CanRenderAppearance(string name)
+        {
+            var content = Content.Get();
+            var appearance = content.AvatarAppearances.Get(name + ".apr");
+            if (appearance?.Bindings == null || appearance.Bindings.Length == 0)
+            {
+                DiagnosticLog.Event("cas-missing-appearance", name);
+                return false;
+            }
+
+            foreach (var reference in appearance.Bindings)
+            {
+                var meshName = reference?.RealBinding?.MeshName;
+                if (!string.IsNullOrEmpty(meshName) && content.AvatarMeshes.Get(meshName)?.TextureName != null)
+                    continue;
+
+                DiagnosticLog.Event("cas-unavailable-mesh", name + "; mesh=" + (meshName ?? "<unnamed>"));
+                return false;
+            }
+
+            return true;
+        }
+
         private void PopulateSimType(string simtype)
         {
             CurrentCode = simtype;
@@ -202,8 +225,8 @@ namespace Simitone.Client.UI.Screens
                 )).ToList();
             ActiveHandgroupTex = ActiveBodyTex.Select(x => (RemoveExt(texnames.FirstOrDefault(y => RemoveExt(y) == "huao"+FindHG(x))) ?? "huao"+ CurrentSkin).Substring(4)).ToList();
 
-            ActiveHeads = SkinCatalog.FilterAvailable(heads, ActiveHeadTex);
-            ActiveBodies = SkinCatalog.FilterAvailable(bodies, ActiveBodyTex, ActiveHandgroupTex);
+            ActiveHeads = SkinCatalog.FilterAvailable(heads, ActiveHeadTex, CanRenderAppearance);
+            ActiveBodies = SkinCatalog.FilterAvailable(bodies, ActiveBodyTex, CanRenderAppearance, ActiveHandgroupTex);
 
             HeadPositionLast = 0;
             BodyPositionLast = 0;

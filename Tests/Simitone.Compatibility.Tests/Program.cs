@@ -42,3 +42,12 @@ Console.WriteLine("PASS: tone switching, catalogue preservation, texture/hand al
 if (SkinCatalog.HasCompatibleSelection(null, catalog) || SkinCatalog.HasCompatibleSelection(catalog, Array.Empty<string>()) ||
     !SkinCatalog.HasCompatibleSelection(catalog, new[]{"body"})) throw new Exception("CAS availability gate failed");
 Console.WriteLine("PASS: CAS availability gates reject missing/empty catalogues and accept populated selections.");
+
+var meshTextures = new List<string> { "light.bmp", "orphan.bmp", "dark.bmp" };
+var meshHands = new List<string> { "light_hands", "orphan_hands", "dark_hands" };
+var renderable = SkinCatalog.FilterAvailable(catalog, meshTextures, name => name != "shared", meshHands);
+Equal(new[] { "custom_light", "custom_dark" }, renderable, "An outfit with a texture but no mesh remained selectable");
+Equal(new[] { "light.bmp", "dark.bmp" }, meshTextures, "Mesh filtering shifted textures");
+Equal(new[] { "light_hands", "dark_hands" }, meshHands, "Mesh filtering shifted handgroups");
+Equal(original, catalog, "Mesh filtering mutated the shared catalogue");
+Console.WriteLine("PASS: CAS skips unrenderable entries and keeps outfit, texture and handgroup choices aligned.");
