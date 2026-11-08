@@ -49,3 +49,22 @@ var buttonless=new UIMobileAlert(new UIAlertOptions { Message="20", TextEntry=tr
 buttonless.Children.OfType<UITextBox>().Single().Enter();
 Check(buttonless.ResponseText=="", "buttonless Enter changed the response");
 Console.WriteLine("PASS: naming-dialog layout, resizing, focus, background, and Enter response (headless UI doubles; no visual playthrough).");
+
+var clicked = new List<string>();
+var actions = new[] { "Next half-star", "Max skills", "Reset to enrolled", "Close" };
+var previewTools = new UIMobileAlert(new UIAlertOptions
+{
+    Message = "20",
+    Buttons = actions.Select((text, i) => new UIAlertButton
+    {
+        Type = i == actions.Length - 1 ? UIAlertButtonType.Cancel : UIAlertButtonType.OK,
+        Text = text,
+        Handler = _ => clicked.Add(text)
+    }).ToArray()
+});
+var toolButtons = previewTools.Children.OfType<UIButton>().ToArray();
+Check(toolButtons.Select(b => b.Caption).SequenceEqual(actions), "Preview tools lost a labelled action");
+Check(ReferenceEquals(previewTools.ButtonMap[UIAlertButtonType.OK], toolButtons[0]), "Type lookup must keep the first button");
+foreach (var button in toolButtons) button.Click();
+Check(clicked.SequenceEqual(actions), "Each preview tool must dispatch its own handler");
+Console.WriteLine("PASS: repeated alert button types retain separate labels and click handlers.");

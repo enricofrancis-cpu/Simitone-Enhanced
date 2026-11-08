@@ -1,4 +1,4 @@
-name: Studio Town and catalog preview checks
+name: Superstar dialog preview checks
 
 on:
   pull_request:
@@ -58,11 +58,11 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Studio-Town-Catalog-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Superstar-Dialog-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Studio-Town-Catalog-Preview-Windows-x64
-          path: release/Studio-Town-Catalog-Preview-Windows/
+          name: Simitone-Enhanced-Superstar-Dialog-Preview-Windows-x64
+          path: release/Superstar-Dialog-Preview-Windows/
           if-no-files-found: error
           retention-days: 30

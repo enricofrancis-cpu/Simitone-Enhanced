@@ -243,7 +243,8 @@ namespace Simitone.Client.UI.Panels
                     HandleClose();
                 });
 
-            ButtonMap.Add(type, btn);
+            // Multiple actions can share a style. Keep the first for type-based lookup.
+            ButtonMap.TryAdd(type, btn);
 
             this.Add(btn);
             return btn;
