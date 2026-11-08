@@ -27,13 +27,14 @@ namespace FSO.SimAntics.NetPlay.Model.Commands
                 if (vm.TS1State.CurrentFamily == null) return true;
                 var gameState = Content.Content.Get().Neighborhood.GameState;
                 var control = vm.Entities.FirstOrDefault(x => x is VMAvatar && !((VMAvatar)x).IsPet && ((VMAvatar)x).GetPersonData(VMPersonDataVariable.TS1FamilyNumber) == vm.TS1State.CurrentFamily?.ChunkID);
-                if (Utils.VMTS1VacationArrival.IsVacationLot(vm.GetGlobalValue(10)))
+                var vacation = Utils.VMTS1VacationArrival.IsVacationLot(vm.GetGlobalValue(10));
+                if (vacation)
                 {
                     var selected = vm.GetObjectById(vm.GetGlobalValue(3)) as VMAvatar;
                     if (selected != null && !selected.Dead && !selected.IsPet &&
                         vm.TS1State.CurrentFamily.RuntimeSubset?.Contains(selected.Object.OBJ.GUID) == true)
                         control = selected;
-                    if (control == null) return true;
+                    else return true;
                 }
                 if (control == null)
                 {
@@ -43,7 +44,16 @@ namespace FSO.SimAntics.NetPlay.Model.Commands
                 if (control != null)
                 {
                     var ava = (VMAvatar)control;
-                    ava.PersistID = ActorUID;
+                    if (vacation)
+                    {
+                        // The local frontend and all Sim commands use MyUID, while the
+                        // temporary server client used for a blueprint load joins as 1.
+                        var previous = vm.GetAvatarByPersist(vm.MyUID);
+                        if (previous != null && previous != ava) previous.PersistID = 0;
+                        if (vm.GetAvatarByPersist(ava.PersistID) == ava)
+                            vm.Context.ObjectQueries.RemoveAvatarPersist(ava.PersistID);
+                    }
+                    ava.PersistID = vacation ? vm.MyUID : ActorUID;
                     ava.AvatarState.Permissions = VMTSOAvatarPermissions.Admin;
                     vm.Context.ObjectQueries.RegisterAvatarPersist(ava, ava.PersistID);
                     vm.SetGlobalValue(3, control.ObjectID);
