@@ -22,12 +22,23 @@ namespace Simitone.Client.UI.Panels
         private TS1GameScreen Game;
         private Texture2D Bg;
         public event Action OnEnd;
-        public UISwitchAvatarPanel(TS1GameScreen screen)
+        internal static VMAvatar[] GetSelectableAvatars(VM vm)
+        {
+            var avatars = vm?.Context?.ObjectQueries?.Avatars;
+            if (avatars == null) return Array.Empty<VMAvatar>();
+
+            var subset = vm.TS1State?.CurrentFamily?.RuntimeSubset;
+            var controlled = vm.GetAvatarByPersist(vm.MyUID);
+            return avatars.OfType<VMAvatar>().Where(avatar => !avatar.Dead &&
+                ((subset != null && subset.Contains(avatar.Object.OBJ.GUID)) || avatar == controlled))
+                .ToArray();
+        }
+
+        public UISwitchAvatarPanel(TS1GameScreen screen, IReadOnlyList<VMAvatar> familyMembers)
         {
             Game = screen;
             Bg = Content.Get().CustomUI.Get("pswitch_bg.png").Get(GameFacade.GraphicsDevice);
             
-            var familyMembers = Game.vm.Context.ObjectQueries.Avatars.Where(x => Game.vm.TS1State.CurrentFamily.RuntimeSubset.Contains(x.Object.OBJ.GUID));
             int i = 0;
             foreach (var fam in familyMembers)
             {

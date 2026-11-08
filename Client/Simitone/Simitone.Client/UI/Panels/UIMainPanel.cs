@@ -513,9 +513,12 @@ namespace Simitone.Client.UI.Panels
             PanelActive = false;
         }
 
-        public void ShowSelect()
+        public bool ShowSelect()
         {
-            var add = new UISwitchAvatarPanel(Game);
+            var avatars = UISwitchAvatarPanel.GetSelectableAvatars(Game.vm);
+            if (avatars.Length == 0) return false;
+
+            var add = new UISwitchAvatarPanel(Game, avatars);
             Add(add);
 
             SetSubpanel(null);
@@ -535,6 +538,7 @@ namespace Simitone.Client.UI.Panels
                 ShowingSelect = false;
                 OnEndSelect?.Invoke();
             };
+            return true;
         }
 
         private void AddFreeWillToggle(UISubpanel parent)

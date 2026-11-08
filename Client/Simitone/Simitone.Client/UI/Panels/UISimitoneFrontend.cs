@@ -185,20 +185,13 @@ namespace Simitone.Client.UI.Panels
                 }
                 else
                 {
-                    StartSelect();
-                    return true;
+                    return MainPanel.ShowSelect();
                 }
             } else
             {
                 MainPanel.Open();
-                StartSelect();
-                return true;
+                return MainPanel.ShowSelect();
             }
-        }
-
-        private void StartSelect()
-        {
-            MainPanel.ShowSelect();
         }
 
         private void OnEndSelect()
