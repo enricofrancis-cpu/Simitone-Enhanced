@@ -110,6 +110,7 @@ namespace Simitone.Client.UI.Panels
         private List<UICategory> OptionsCategories = new List<UICategory>()
         {
             new UICategory() { ID = 0, IconName = "cat_build_arch.png" },
+            new UICategory() { ID = 1, IconName = "mode_options.png" },
         };
 
         public UIMainPanel(TS1GameScreen game) : base()
@@ -269,6 +270,14 @@ namespace Simitone.Client.UI.Panels
                     panel = new UIBuyBrowsePanel(Game, (sbyte)obj, UICatalogMode.Build);
                     break;
                 case UIMainPanelMode.OPTIONS:
+                    if (obj == 1)
+                    {
+                        panel = new UIButtonSubpanel(Game, new UICatFunc[] {
+                            new UICatFunc("Footprint shadows", "mode_options.png", () => SetLightingMode(2)),
+                            new UICatFunc("Mesh shadows", "mode_options.png", () => SetLightingMode(3)),
+                        });
+                        break;
+                    }
                     panel = new UIButtonSubpanel(Game, new UICatFunc[] {
                         new UICatFunc(GameFacade.Strings.GetString("145", "3"), "opt_save.png", () => { Game.Save(); }),
                         new UICatFunc(GameFacade.Strings.GetString("145", "1"), "opt_neigh.png", () => { Game.ReturnToNeighbourhood(); }),
@@ -541,6 +550,27 @@ namespace Simitone.Client.UI.Panels
             return true;
         }
 
+        private void SetLightingMode(int mode)
+        {
+            var config = FSO.LotView.WorldConfig.Current;
+            if (config.LightingMode != mode)
+            {
+                config.LightingMode = mode;
+                Game.LotControl.World.ChangedWorldConfig(GameFacade.GraphicsDevice);
+                GlobalSettings.Default.LightingMode = mode;
+                GlobalSettings.Default.Save();
+            }
+
+            UIMobileAlert alert = null;
+            alert = new UIMobileAlert(new UIAlertOptions
+            {
+                Title = "Graphics",
+                Message = mode == 3 ? "Mesh shadows enabled." : "Footprint shadows enabled.",
+                Buttons = UIAlertButton.Ok(_ => UIScreen.RemoveDialog(alert)),
+            });
+            UIScreen.GlobalShowDialog(alert, true);
+        }
+
         private void AddFreeWillToggle(UISubpanel parent)
         {
             // Index 3 (4th button) to match spacing of existing buttons
@@ -598,3 +628,4 @@ namespace Simitone.Client.UI.Panels
         OPTIONS
     }
 }
+

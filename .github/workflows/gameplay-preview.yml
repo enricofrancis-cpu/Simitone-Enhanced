@@ -1,4 +1,4 @@
-name: Expansion interaction preview checks
+name: Interaction feedback and graphics preview checks
 
 on:
   pull_request:
@@ -60,11 +60,12 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Expansion-Interaction-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Interaction-Feedback-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Expansion-Interaction-Preview-Windows-x64
-          path: release/Expansion-Interaction-Preview-Windows/
+          name: Simitone-Enhanced-Interaction-Feedback-Preview-Windows-x64
+          path: release/Interaction-Feedback-Preview-Windows/
           if-no-files-found: error
           retention-days: 30
+

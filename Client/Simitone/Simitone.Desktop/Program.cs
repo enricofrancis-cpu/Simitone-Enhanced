@@ -332,7 +332,8 @@ namespace Simitone.Windows
                 GlobalSettings.Default.TS1HybridEnable = true;
                 GlobalSettings.Default.TS1HybridPath = path;
                 GlobalSettings.Default.ClientVersion = "0";
-                GlobalSettings.Default.LightingMode = 3;
+                if (GlobalSettings.Default.LightingMode < 2 || GlobalSettings.Default.LightingMode > 3)
+                    GlobalSettings.Default.LightingMode = 3;
                 GlobalSettings.Default.AntiAlias = aa ? 1 : 0;
                 GlobalSettings.Default.ComplexShaders = true;
                 GlobalSettings.Default.EnableTransitions = true;
@@ -438,3 +439,4 @@ namespace Simitone.Windows
         }
     }
 }
+

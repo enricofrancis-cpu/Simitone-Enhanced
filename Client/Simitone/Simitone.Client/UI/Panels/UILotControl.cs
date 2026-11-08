@@ -86,8 +86,13 @@ namespace Simitone.Client.UI.Panels
         /// </summary>
         public event Action OnCustomControlReleased;
 
-        private int OldMX;
-        private int OldMY;
+        private Point? HoverPointer;
+        private Matrix HoverCamera;
+        private float HoverScale;
+        private sbyte HoverFloor;
+        private VMEntity HoverActor;
+        private TimeSpan NextHoverRefresh;
+        private VMMultitileGroup HighlightedGroup;
         private bool FoundMe; //if false and avatar changes, center. Should center on join lot.
 
         public bool RMBScroll;
@@ -474,20 +479,20 @@ namespace Simitone.Client.UI.Panels
                     pt.Y,
                     GameFacade.GraphicsDevice);
 
-                ObjectHover = newHover;
+                HoverPointer = null; // Resolve the hover independently after the pie menu closes.
 
                 var lot = vm.GetGlobalValue(10);
                 var studioTown = lot >= 81 && lot <= 90;
                 var vacation = lot >= 40 && lot < 50;
                 var clickEvent = studioTown ? "studio-town-click" : vacation ? "vacation-click" : null;
-                bool objSelected = ObjectHover > 0;
+                bool objSelected = newHover > 0;
                 if (clickEvent != null && !objSelected)
                     DiagnosticLog.Event(clickEvent, $"lot={lot}; tile={targetPos}; hit=none");
-                if (objSelected || (GotoObject.Position != LotTilePos.OUT_OF_WORLD && ObjectHover <= 0))
+                if (objSelected || (GotoObject.Position != LotTilePos.OUT_OF_WORLD && newHover <= 0))
                 {
                     if (objSelected)
                     {
-                        obj = vm.GetObjectById(ObjectHover);
+                        obj = vm.GetObjectById(newHover);
                     }
                     else
                     {
@@ -504,7 +509,7 @@ namespace Simitone.Client.UI.Panels
                     else if (obj != null)
                     {
                         var clicked = obj;
-                        obj = obj.MultitileGroup.GetInteractionGroupLeader(obj);
+                        obj = ResolveLiveTarget(obj);
                         var clickTarget = clickEvent != null && objSelected && obj is VMGameObject && ActiveEntity is VMAvatar actor
                             ? $"lot={lot}; hit={clicked.Object.OBJ.GUID:X8}; guid={obj.Object.OBJ.GUID:X8}; object={obj.Object.OBJ.ChunkLabel}; person-type={actor.GetPersonData(FSO.SimAntics.Model.VMPersonDataVariable.PersonType)}"
                             : null;
@@ -532,10 +537,10 @@ namespace Simitone.Client.UI.Panels
                         }
                         else
                         {
-                            var menu = obj.GetPieMenu(vm, ActiveEntity, false, true);
+                            var menu = GetLiveMenu(obj);
                             if (clickTarget != null)
-                                DiagnosticLog.Event(clickEvent, $"{clickTarget}; menu-count={menu.Count}");
-                            if (menu.Count != 0)
+                                DiagnosticLog.Event(clickEvent, $"{clickTarget}; menu-count={menu?.Count ?? 0}");
+                            if (menu?.Count > 0)
                             {
                                 HITVM.Get().PlaySoundEvent(UISounds.PieMenuAppear);
                                 PieMenu = new UIPieMenu(menu, obj, ActiveEntity, this);
@@ -591,27 +596,64 @@ namespace Simitone.Client.UI.Panels
             return new Rectangle(0, 0, GlobalSettings.Default.GraphicsWidth, GlobalSettings.Default.GraphicsHeight);
         }
 
+        private static VMEntity ResolveLiveTarget(VMEntity hit)
+        {
+            return hit?.MultitileGroup.GetInteractionGroupLeader(hit);
+        }
+
+        private List<VMPieMenuInteraction> GetLiveMenu(VMEntity target)
+        {
+            if (target == null || ActiveEntity == null || (target is VMGameObject obj && obj.Disabled != 0))
+                return null;
+            return target.GetPieMenu(vm, ActiveEntity, false, true);
+        }
+
+        private void SetHoverHighlight(VMMultitileGroup group)
+        {
+            if (group == HighlightedGroup) return;
+            if (HighlightedGroup != null)
+                foreach (var part in HighlightedGroup.Objects)
+                    if (part.WorldUI is ObjectComponent oldObject) oldObject.HoverHighlighted = false;
+            HighlightedGroup = group;
+            if (group != null)
+                foreach (var part in group.Objects)
+                    if (part.WorldUI is ObjectComponent newObject) newObject.HoverHighlighted = true;
+        }
+
+        private void ClearLiveHover()
+        {
+            HoverPointer = null;
+            ObjectHover = 0;
+            InteractionsAvailable = false;
+            SetHoverHighlight(null);
+        }
+
         public void LiveModeUpdate(UpdateState state, bool scrolled)
         {
-            if (MouseIsOn && !RMBScroll && ActiveEntity != null && !FSOEnvironment.SoftwareKeyboard)
+            if (MouseIsOn && !RMBScroll && PieMenu == null && ActiveEntity != null && !FSOEnvironment.SoftwareKeyboard)
             {
-
-                if (state.MouseState.X != OldMX || state.MouseState.Y != OldMY)
+                var pointer = new Point(state.MouseState.X, state.MouseState.Y);
+                var now = state.Time.TotalGameTime;
+                var camera = World.State.ViewProjection;
+                if (HoverPointer != pointer || HoverActor != ActiveEntity || now >= NextHoverRefresh)
                 {
-                    OldMX = state.MouseState.X;
-                    OldMY = state.MouseState.Y;
-                    var pick = ScreenToWorldPick(new Point(OldMX, OldMY));
-                    var newHover = World.GetObjectIDAtScreenPos(pick.X, pick.Y, GameFacade.GraphicsDevice);
-
-                    if (ObjectHover != newHover)
+                    var repick = HoverPointer != pointer || HoverCamera != camera || HoverScale != World.BackbufferScale
+                        || HoverFloor != World.State.Level || (ObjectHover > 0 && vm.GetObjectById(ObjectHover) == null);
+                    if (repick)
                     {
-                        ObjectHover = newHover;
-                        var obj = vm.GetObjectById(ObjectHover);
-                        obj = obj?.MultitileGroup.GetInteractionGroupLeader(obj);
-                        InteractionsAvailable = obj != null
-                            && (obj is not VMGameObject gameObject || gameObject.Disabled == 0)
-                            && obj.GetPieMenu(vm, ActiveEntity, false, true).Count > 0;
+                        var pick = ScreenToWorldPick(pointer);
+                        ObjectHover = World.GetObjectIDAtScreenPos(pick.X, pick.Y, GameFacade.GraphicsDevice);
                     }
+
+                    HoverPointer = pointer;
+                    HoverCamera = camera;
+                    HoverScale = World.BackbufferScale;
+                    HoverFloor = World.State.Level;
+                    HoverActor = ActiveEntity;
+                    NextHoverRefresh = now + TimeSpan.FromMilliseconds(125);
+                    var target = ResolveLiveTarget(vm.GetObjectById(ObjectHover));
+                    InteractionsAvailable = GetLiveMenu(target)?.Count > 0;
+                    SetHoverHighlight(InteractionsAvailable && target is VMGameObject ? target.MultitileGroup : null);
 
                     if (!TipIsError) ShowTooltip = false;
                     if (ObjectHover > 0)
@@ -658,7 +700,7 @@ namespace Simitone.Client.UI.Panels
             }
             else
             {
-                ObjectHover = 0;
+                ClearLiveHover();
             }
 
             if (!scrolled)
@@ -880,6 +922,7 @@ namespace Simitone.Client.UI.Panels
                 }
             }*/
 
+            if (!Visible) ClearLiveHover();
             if (Visible)
             {
                 if (ShowTooltip) state.UIState.TooltipProperties.UpdateDead = false;
@@ -1030,7 +1073,8 @@ namespace Simitone.Client.UI.Panels
                     UIScreen.GlobalShowDialog(alert, true);
                 }
                 if (LiveMode) LiveModeUpdate(state, scrolled);
-                else if (CustomControl != null)
+                else ClearLiveHover();
+                if (!LiveMode && CustomControl != null)
                 {
                     // ESC cancels floor/wallpaper/wall tools
                     if (state.KeyboardState.IsKeyDown(Keys.Escape))
@@ -1052,7 +1096,7 @@ namespace Simitone.Client.UI.Panels
                         CustomControl.Update(state, scrolled);
                     }
                 }
-                else ObjectHolder.Update(state, scrolled);
+                else if (!LiveMode) ObjectHolder.Update(state, scrolled);
 
                 //set cutaway around mouse
                 UpdateCutaway(state);

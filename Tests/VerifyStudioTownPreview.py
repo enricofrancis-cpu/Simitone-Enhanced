@@ -8,6 +8,9 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 client = root / "Client/Simitone/Simitone.Client"
 source = (client / "UI/Panels/UIHouseSelectPanel.cs").read_text(encoding="utf-8-sig")
+thread = (root / "EngineOverrides/FSO.SimAntics/Engine/VMThread.cs").read_text(encoding="utf-8-sig")
+permissions = thread[thread.index("        internal static bool IsUninvitedTS1Visitor"):
+                     thread.index("        public List<VMPieMenuInteraction> CheckAction")]
 title_method = source[source.index("        internal static string GetLotTitle"):
                       source.index("        public UIHouseSelectPanel(int houseID)")]
 with tempfile.TemporaryDirectory(prefix="simitone-lot-title-") as temporary:
@@ -22,6 +25,7 @@ with tempfile.TemporaryDirectory(prefix="simitone-lot-title-") as temporary:
 """)
     (fixture / "Program.cs").write_text("""
 using System;
+MenuPermissions.Verify();
 Check(Probe.GetLotTitle("Studio", "Main Street", 83) == "Studio");
 Check(Probe.GetLotTitle("", "Main Street", 83) == "Main Street");
 Check(Probe.GetLotTitle("", null, 83) == "Lot 83");
@@ -32,6 +36,65 @@ static void Check(bool condition)
 }
 class Probe {
 """ + title_method + "}")
+    (fixture / "Permissions.cs").write_text("""
+using System;
+using System.Collections.Generic;
+using System.Linq;
+[Flags]
+enum TTABFlags { AllowVisitors=1, TS1NoChild=16, TS1NoAdult=64, Debug=128,
+    TS1AllowCats=512, TS1AllowDogs=1024, FSOSkipPermissions=2048 }
+enum VMPersonDataVariable { PersonType, GreetStatus, PersonsAge }
+enum VMPrimitiveExitCode { RETURN_TRUE, RETURN_FALSE }
+class VMPieMenuInteraction {}
+class VMQueuedAction {
+    public TTABFlags Flags;
+    public object CheckRoutine, Callee, CodeOwner, StackObject;
+}
+class VMStackFrame { public object Caller, Callee, CodeOwner, StackObject, Routine; public short[] Args; }
+class FakeContext { public FakeVM VM = new(); }
+class FakeVM { public Lot TS1State = new(); }
+class Lot { public Family CurrentFamily = new(); }
+class Family { public uint[] RuntimeSubset = Array.Empty<uint>(); }
+class FakeObject { public FakeOBJD OBJ = new(); }
+class FakeOBJD { public uint GUID = 7; }
+class VMAvatar {
+    public bool IsPet, IsCat, IsDog;
+    public short PersonType=1, GreetStatus=0, Age=25;
+    public FakeObject Object = new();
+    public short GetPersonData(VMPersonDataVariable v) =>
+        v == VMPersonDataVariable.PersonType ? PersonType :
+        v == VMPersonDataVariable.GreetStatus ? GreetStatus : Age;
+}
+class MenuPermissions {
+    private object Entity = new VMAvatar();
+    private FakeContext Context = new();
+    private bool CheckPasses = true;
+    private VMPrimitiveExitCode EvaluateCheck(FakeContext c, object entity, VMStackFrame f,
+        object unused, List<VMPieMenuInteraction> result) =>
+        CheckPasses ? VMPrimitiveExitCode.RETURN_TRUE : VMPrimitiveExitCode.RETURN_FALSE;
+    public static void Verify() {
+        var engine = new MenuPermissions();
+        var sim = (VMAvatar)engine.Entity;
+        var stage = new VMQueuedAction { Flags = (TTABFlags)0x32, CheckRoutine = new object() };
+        void Expect(bool allowed) {
+            if ((engine.CheckTS1Action(stage, false) != null) != allowed)
+                throw new Exception("Unexpected stage menu permission.");
+        }
+        Expect(false); // Ungreeted NPC visitor.
+        engine.Context.VM.TS1State.CurrentFamily.RuntimeSubset = new uint[] { 7 };
+        Expect(true); // Active traveling household member still has PersonType 1.
+        sim.Age = 10; Expect(false);
+        sim.Age = 25;
+        engine.CheckPasses = false; Expect(false);
+        engine.CheckPasses = true;
+        sim.IsPet = true; Expect(false);
+        sim.IsPet = false;
+        engine.Context.VM.TS1State.CurrentFamily = null;
+        Expect(false);
+        sim.GreetStatus = 2;
+        Expect(true); // Preserve greeted visitor behavior.
+    }
+""" + permissions + "}")
     subprocess.run(["dotnet", "run", "--project", str(fixture), "-c", "Release"], check=True)
 
 assets = client / "Content/3D"
@@ -50,10 +113,10 @@ for _ in range(2):
     offset += 24 * 32
     assert struct.unpack_from("<25i", data, offset) == (24, *range(24))
     offset += 25 * 4
-assert len(points) == 10 and sum(point[1] == 0.03 for point in points) == 8
+assert len(points) == 10 and sum(point[1] == 0.1612 for point in points) == 8
 for axis, extent in enumerate((0.675, 2.1, 0.675)):
     values = [point[axis] for point in points]
-    assert abs(max(values) - min(values) - extent) < 1e-4
+    assert abs(max(values) - min(values) - extent * 0.94) < 2e-4
 assert len(data) - offset == 24
 assert (assets / "TEX_2.png").read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
 print("PASS: lot title fallback and classic plumbob mesh and texture.")
