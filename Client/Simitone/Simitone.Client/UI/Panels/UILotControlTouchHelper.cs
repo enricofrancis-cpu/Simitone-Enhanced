@@ -134,8 +134,7 @@ namespace Simitone.Client.UI.Panels
                             if (transitionTo == -1)
                             {
                                 Mode = -1;
-                                var screenMiddle = new Point(GameFacade.Screens.CurrentUIScreen.ScreenWidth / 2, GameFacade.Screens.CurrentUIScreen.ScreenHeight / 2);
-                                Master.ShowPieMenu(((TapPoint - screenMiddle).ToVector2() / Master.World.BackbufferScale).ToPoint() + screenMiddle, state);
+                                Master.ShowPieMenu(TapPoint, state);
                             }
                             else
                             {
@@ -147,8 +146,7 @@ namespace Simitone.Client.UI.Panels
                                 else if (++MiceDownTimer > TAP_TIMER)
                                 {
                                     Mode = 3;
-                                    var screenMiddle = new Point(GameFacade.Screens.CurrentUIScreen.ScreenWidth / 2, GameFacade.Screens.CurrentUIScreen.ScreenHeight / 2);
-                                    Master.ShowPieMenu(((TapPoint - screenMiddle).ToVector2() / Master.World.BackbufferScale).ToPoint() + screenMiddle, state);
+                                    Master.ShowPieMenu(TapPoint, state);
                                 }
                             }
                         }

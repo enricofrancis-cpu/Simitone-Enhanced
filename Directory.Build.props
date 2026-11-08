@@ -1,0 +1,16 @@
+<Project>
+  <!-- RID-specific restore of the legacy server dependency graph otherwise
+       chooses 4.0.x facades below runtime.win.*'s 4.3.0 minimum. Keep this
+       compatibility pin limited to the self-contained preview build. -->
+  <ItemGroup Condition="'$(SimitonePreviewBundle)' == 'true' and '$(MSBuildProjectName)' == 'FSO.Server.Common'">
+    <PackageReference Include="System.Collections" Version="4.3.0" />
+    <PackageReference Include="System.Diagnostics.Debug" Version="4.3.0" />
+    <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.Extensions" Version="4.3.0" />
+    <PackageReference Include="System.Runtime.Handles" Version="4.3.0" />
+    <PackageReference Include="System.Threading" Version="4.3.0" />
+    <PackageReference Include="System.Globalization" Version="4.3.0" />
+    <PackageReference Include="System.Text.Encoding" Version="4.3.0" />
+    <PackageReference Include="System.Threading.Tasks" Version="4.3.0" />
+  </ItemGroup>
+</Project>

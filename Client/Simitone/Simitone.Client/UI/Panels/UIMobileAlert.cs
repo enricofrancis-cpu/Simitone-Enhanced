@@ -1,4 +1,4 @@
-﻿using FSO.Client;
+using FSO.Client;
 using FSO.Client.UI.Controls;
 using FSO.Client.UI.Framework;
 using FSO.Content;
@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FSO.Common.Rendering.Framework.Model;
+using FSO.Common.Utils;
 
 namespace Simitone.Client.UI.Panels
 {
@@ -26,6 +27,7 @@ namespace Simitone.Client.UI.Panels
 
         private List<UIButton> Buttons;
         private UITextBox TextBox;
+        private bool TextBoxFocused;
 
         public string ResponseText
         {
@@ -92,6 +94,24 @@ namespace Simitone.Client.UI.Panels
             {
                 TextBox = new UITextBox();
                 TextBox.MaxChars = options.MaxChars;
+                // TS1 has no TSO text-entry background. Reuse the shared pixel instead.
+                TextBox.SetBackgroundTexture(TextureGenerator.GetPxWhite(GameFacade.GraphicsDevice), 0, 0, 0, 0);
+                TextBox.TextMargin = new Rectangle(12, 10, 12, 10);
+                TextBox.Alignment = TextAlignment.Center;
+                TextBox.TextStyle = TextBox.TextStyle.Clone();
+                TextBox.TextStyle.Size = 25;
+                TextBox.TextStyle.Color = Color.Black;
+                TextBox.OnEnterPress += (elem) =>
+                {
+                    if (Closing) return;
+                    // Match the first button, including its handler and response text.
+                    if (Buttons.Count == 0) return;
+                    var button = Buttons[0];
+                    if (button.Disabled || !button.Visible) return;
+                    var handler = m_Options.Buttons[0].Handler;
+                    if (handler != null) handler(button);
+                    else HandleClose();
+                };
                 this.Add(TextBox);
             }
 
@@ -112,6 +132,15 @@ namespace Simitone.Client.UI.Panels
 
             h = Math.Max(h, Math.Max((int)IconSpace.Y - 25, m_MessageText == null ? 0 : m_MessageText.BoundingBox.Height) + 105);
 
+            // Reserve an input row before laying out buttons, including wrapped rows.
+            if (m_Options.TextEntry)
+            {
+                TextBox.X = 80;
+                TextBox.Y = h + 45;
+                TextBox.SetSize(Math.Max(1, w - 160), 50);
+                h += 95;
+            }
+
             if (Buttons.Count > 0)
             {
                 h += 175;
@@ -119,14 +148,6 @@ namespace Simitone.Client.UI.Panels
             else
             {
                 h += 32;
-            }
-
-            if (m_Options.TextEntry)
-            {
-                TextBox.X = 32;
-                TextBox.Y = h - 54;
-                TextBox.SetSize(w - 64, 25);
-                h += 45;
             }
 
             h = ResetButtons(h, true);
@@ -222,7 +243,8 @@ namespace Simitone.Client.UI.Panels
                     HandleClose();
                 });
 
-            ButtonMap.Add(type, btn);
+            // Multiple actions can share a style. Keep the first for type-based lookup.
+            ButtonMap.TryAdd(type, btn);
 
             this.Add(btn);
             return btn;
@@ -260,6 +282,11 @@ namespace Simitone.Client.UI.Panels
         public override void Update(UpdateState state)
         {
             base.Update(state);
+            if (TextBox != null && !TextBoxFocused && !Closing)
+            {
+                state.InputManager.SetFocus(TextBox);
+                TextBoxFocused = true;
+            }
             var off = ((Closing) ? 1 : -1) * (1 - InterpolatedAnimation) * Width;
             var newIX = TargetIX + off;
             if (Icon.X != newIX)
