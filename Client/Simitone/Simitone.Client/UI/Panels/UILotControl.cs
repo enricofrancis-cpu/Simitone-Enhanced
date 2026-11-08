@@ -468,7 +468,11 @@ namespace Simitone.Client.UI.Panels
 
                 ObjectHover = newHover;
 
+                var lot = vm.GetGlobalValue(10);
+                var studioTown = lot >= 81 && lot <= 90;
                 bool objSelected = ObjectHover > 0;
+                if (studioTown && !objSelected)
+                    DiagnosticLog.Event("studio-town-click", $"lot={lot}; tile={targetPos}; hit=none");
                 if (objSelected || (GotoObject.Position != LotTilePos.OUT_OF_WORLD && ObjectHover <= 0))
                 {
                     if (objSelected)
@@ -490,9 +494,14 @@ namespace Simitone.Client.UI.Panels
                     else if (obj != null)
                     {
                         obj = obj.MultitileGroup.GetInteractionGroupLeader(obj);
+                        var clickTarget = studioTown && objSelected && obj is VMGameObject
+                            ? $"lot={lot}; guid={obj.Object.OBJ.GUID:X8}; object={obj.Object.OBJ.ChunkLabel}"
+                            : null;
                         if (obj is VMGameObject && ((VMGameObject)obj).Disabled > 0)
                         {
                             var flags = ((VMGameObject)obj).Disabled;
+                            if (clickTarget != null)
+                                DiagnosticLog.Event("studio-town-click", $"{clickTarget}; disabled={flags}");
 
                             if ((flags & VMGameObjectDisableFlags.ForSale) > 0)
                             {
@@ -513,6 +522,8 @@ namespace Simitone.Client.UI.Panels
                         else
                         {
                             var menu = obj.GetPieMenu(vm, ActiveEntity, false, true);
+                            if (clickTarget != null)
+                                DiagnosticLog.Event("studio-town-click", $"{clickTarget}; menu-count={menu.Count}");
                             if (menu.Count != 0)
                             {
                                 HITVM.Get().PlaySoundEvent(UISounds.PieMenuAppear);
@@ -831,12 +842,12 @@ namespace Simitone.Client.UI.Panels
 
 
             //update plumbbob
-            var plumb = Content.Get().RCMeshes.Get("arrow.fsom");
+            var plumb = Content.Get().RCMeshes.Get("classic-plumbob.fsom");
             foreach (VMAvatar avatar in vm.Context.ObjectQueries.Avatars)
             {
                 if (avatar.Avatar == null) continue;
                 var isActive = (avatar == ActiveEntity);
-                if ((avatar.Avatar.HeadObject == plumb) != isActive)
+                if (plumb != null && (avatar.Avatar.HeadObject == plumb) != isActive)
                 {
                     avatar.Avatar.HeadObject = (avatar == ActiveEntity) ? plumb : null;
                     avatar.Avatar.HeadObjectSpeedyVel = 0.2f;
