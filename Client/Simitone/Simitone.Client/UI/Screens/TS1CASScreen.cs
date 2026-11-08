@@ -178,12 +178,17 @@ namespace Simitone.Client.UI.Screens
             return "x";
         }
 
+        private bool MissingAppearanceShown;
+        private bool HasAppearanceChoices => SkinCatalog.HasCompatibleSelection(ActiveHeads, ActiveBodies);
+
         private void PopulateSimType(string simtype)
         {
             CurrentCode = simtype;
-            var heads = Content.Get().BCFGlobal.CollectionsByName["c"].ClothesByAvatarType[simtype];
+            var collections = Content.Get().BCFGlobal.CollectionsByName;
+            var heads = collections.TryGetValue("c", out var headCollection) && headCollection.ClothesByAvatarType.TryGetValue(simtype, out var headItems)
+                ? headItems : new List<string>();
             if (simtype[1] == 'c') simtype += "chd";
-            var bodies = Content.Get().BCFGlobal.CollectionsByName["b"].GeneralAvatarType(simtype);
+            var bodies = collections.TryGetValue("b", out var bodyCollection) ? bodyCollection.GeneralAvatarType(simtype) : new List<string>();
 
             var tex = (TS1AvatarTextureProvider)Content.Get().AvatarTextures;
             var texnames = tex.GetAllNames();
@@ -197,27 +202,28 @@ namespace Simitone.Client.UI.Screens
                 )).ToList();
             ActiveHandgroupTex = ActiveBodyTex.Select(x => (RemoveExt(texnames.FirstOrDefault(y => RemoveExt(y) == "huao"+FindHG(x))) ?? "huao"+ CurrentSkin).Substring(4)).ToList();
 
-            for (int i=0; i<ActiveHeads.Count; i++)
-            {
-                if (ActiveHeadTex[i] == null)
-                {
-                    ActiveHeadTex.RemoveAt(i);
-                    ActiveHeads.RemoveAt(i--);
-                }
-            }
-
-            for (int i = 0; i < ActiveBodies.Count; i++)
-            {
-                if (ActiveBodyTex[i] == null)
-                {
-                    ActiveBodyTex.RemoveAt(i);
-                    ActiveHandgroupTex.RemoveAt(i);
-                    ActiveBodies.RemoveAt(i--);
-                }
-            }
+            ActiveHeads = SkinCatalog.FilterAvailable(heads, ActiveHeadTex);
+            ActiveBodies = SkinCatalog.FilterAvailable(bodies, ActiveBodyTex, ActiveHandgroupTex);
 
             HeadPositionLast = 0;
             BodyPositionLast = 0;
+            if (!HasAppearanceChoices)
+            {
+                if (!MissingAppearanceShown)
+                {
+                    MissingAppearanceShown = true;
+                    DiagnosticLog.Event("cas-unavailable-appearance", "type=" + CurrentCode + "; tone=" + CurrentSkin);
+                    UIMobileAlert alert = null;
+                    alert = new UIMobileAlert(new UIAlertOptions {
+                        Title = "Appearance unavailable",
+                        Message = "No compatible heads or bodies were found for this selection. Choose another age, gender or skin tone, or check the custom-content textures.",
+                        Buttons = new[] { new UIAlertButton(UIAlertButtonType.OK, button => alert.Close()) }
+                    });
+                    UIScreen.GlobalShowDialog(alert, true);
+                }
+                return;
+            }
+            MissingAppearanceShown = false;
             PopulateReal();
         }
 
@@ -252,6 +258,7 @@ namespace Simitone.Client.UI.Screens
 
         private void UpdateCarousel(UpdateState state)
         {
+            if (!HasAppearanceChoices) return;
             var frac = 60f / FSOEnvironment.RefreshRate;
             var minSpeed = (Math.PI / 240f) * frac;
             var mult = (float)Math.Pow(0.95, frac);
@@ -366,6 +373,7 @@ namespace Simitone.Client.UI.Screens
 
         private void SetBody(VMAvatar body, int i)
         {
+            if (ActiveBodies == null || ActiveBodies.Count == 0) return;
             i = (int)DirectionUtils.PosMod(i, ActiveBodies.Count);
             var code = CurrentCode[0];
             if (CurrentCode[1] != 'a') code = 'u';
@@ -396,12 +404,14 @@ namespace Simitone.Client.UI.Screens
 
         private void SetHead(VMAvatar head, int i)
         {
+            if (ActiveHeads == null || ActiveHeads.Count == 0) return;
             i = (int)DirectionUtils.PosMod(i, ActiveHeads.Count);
             head.HeadOutfit = new FSO.SimAntics.Model.VMOutfitReference(new Outfit() { TS1AppearanceID = ActiveHeads[i] + ".apr", TS1TextureID = ActiveHeadTex[i] });
         }
 
         private void PopulateReal()
         {
+            if (!HasAppearanceChoices) return;
             var child = CurrentCode[1] == 'c';
             //var animSource = HeadAvatars[0].Avatar.Skeleton;
 
@@ -552,6 +562,7 @@ namespace Simitone.Client.UI.Screens
 
         private void Accept(UIElement button)
         {
+            if (Mode == UICASMode.SimEdit && !HasAppearanceChoices) return;
             switch (Mode)
             {
                 case UICASMode.SimEdit:
@@ -643,6 +654,7 @@ namespace Simitone.Client.UI.Screens
 
         private void CASPanel_OnRandom()
         {
+            if (!HasAppearanceChoices) return;
             var rand = new Random();
             HeadPosition = rand.Next(ActiveHeads.Count);
             BodyPosition = rand.Next(ActiveBodies.Count);
@@ -714,7 +726,7 @@ namespace Simitone.Client.UI.Screens
             switch (Mode)
             {
                 case UICASMode.SimEdit:
-                    if (CASPanel.FirstNameTextBox.CurrentText.Length == 0) disableAccept = true;
+                    if (CASPanel.FirstNameTextBox.CurrentText.Length == 0 || !HasAppearanceChoices) disableAccept = true;
                     break;
                 case UICASMode.FamilySelect:
                     if (FamiliesPanel.Selection == -1) disableAccept = true;
@@ -783,11 +795,7 @@ namespace Simitone.Client.UI.Screens
                             ConfirmDialog.Close(); 
                             ConfirmDialog = null;
                             var neigh = Content.Get().Neighborhood;
-                            var fami = selectedFamily;
-                            var fams = neigh.MainResource.Get<FAMs>(fami.ChunkID);
-                            
-                            fami.ChunkParent.FullRemoveChunk(fami);
-                            if (fams != null) fams.ChunkParent.FullRemoveChunk(fams);
+                            if (!Simitone.Client.Utils.FamilyDeletion.DeleteUnplaced(neigh.MainResource, selectedFamily)) return;
                             
                             neigh.SaveNeighbourhood(true);
                             
@@ -812,13 +820,6 @@ namespace Simitone.Client.UI.Screens
             // AND ChunkID > 0 (exclude "Default Family" which is ChunkID=0 with 0 members)
             // AND FamilyGUIDs.Length > 0 (must have at least one member)
             var families = all.Where(x => x.HouseNumber == 0 && x.ChunkID > 0 && x.ChunkID < 1000 && x.FamilyGUIDs.Length > 0).ToList();
-            
-            File.AppendAllText("simitone_debug.log", $"[SetFamilies] Families being added to CAS panel ({families.Count} total):\n");
-            foreach (var fam in families)
-            {
-                File.AppendAllText("simitone_debug.log", 
-                    $"  - ChunkID={fam.ChunkID}, HouseNumber={fam.HouseNumber}, Unknown={fam.Unknown}, Members={fam.FamilyGUIDs.Length}\n");
-            }
             
             FamiliesPanel.UpdateFamilies(families, vm);
         }
@@ -918,6 +919,7 @@ namespace Simitone.Client.UI.Screens
 
         public void AcceptMember()
         {
+            if (!HasAppearanceChoices) return;
             var mem = BuildMember();
             if (EditIndex == -1)
             {
@@ -932,6 +934,7 @@ namespace Simitone.Client.UI.Screens
 
         public CASFamilyMember BuildMember()
         {
+            if (!HasAppearanceChoices) throw new InvalidOperationException("No compatible CAS appearance is selected.");
             //build the object out of the contents of various menus
             var i = (int)DirectionUtils.PosMod(Math.Round(BodyPosition+8), ActiveBodies.Count);
             var j = (int)DirectionUtils.PosMod(Math.Round(HeadPosition+8), ActiveHeads.Count);
@@ -1011,6 +1014,7 @@ namespace Simitone.Client.UI.Screens
             Driver = new VMServerDriver(globalLink);
 
             vm = new VM(new VMContext(World), Driver, new UIHeadlineRendererProvider());
+            vm.OnDialog += info => Simitone.Client.Utils.DiagnosticLog.SimAntics(info?.Title, info?.Message);
             vm.ListenBHAVChanges();
             vm.Init();
 

@@ -1,4 +1,4 @@
-﻿using FSO.Client;
+using FSO.Client;
 using FSO.Common;
 using FSO.LotView;
 using Simitone.Client;
@@ -42,6 +42,18 @@ namespace Simitone.Windows
 
             ILocator gameLocator;
             bool linux = pid == PlatformID.MacOSX || pid == PlatformID.Unix;
+            if (!linux || Simitone.Client.Utils.PreviewProfile.HasOverride(args))
+            {
+                FSOEnvironment.UserDir = Simitone.Client.Utils.PreviewProfile.Resolve(args,
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Simitone/"), baseDir);
+                Directory.CreateDirectory(FSOEnvironment.UserDir);
+            }
+            Simitone.Client.Utils.DiagnosticLog.Start(FSOEnvironment.UserDir,
+                Simitone.Client.Utils.DiagnosticLog.ReadBuild(baseDir));
+            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            AppDomain.CurrentDomain.ProcessExit += (sender, eventArgs) => Simitone.Client.Utils.DiagnosticLog.Event("process-exit");
+            System.Threading.Tasks.TaskScheduler.UnobservedTaskException += (sender, eventArgs) =>
+                Simitone.Client.Utils.DiagnosticLog.Error("unobserved-task", eventArgs.Exception);
             if (linux && Directory.Exists("/Users"))
                 gameLocator = new MacOSLocator();
             else if (linux)
@@ -116,7 +128,6 @@ namespace Simitone.Windows
             // Set FSOEnvironment.UserDir early so GlobalSettings can load correctly
             if (!linux)
             {
-                FSOEnvironment.UserDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Simitone/").Replace('\\', '/');
                 Directory.CreateDirectory(FSOEnvironment.UserDir);
             }
 
@@ -289,11 +300,12 @@ namespace Simitone.Windows
                 path = gameLocator.FindTheSims1();
             }
 
+            Simitone.Client.Utils.DiagnosticLog.AddPrivatePath(path, "<game-install>");
+            Simitone.Client.Utils.DiagnosticLog.Event("backend-request", useDX ? "DirectX" : "OpenGL");
             useDX = MonogameLinker.Link(useDX);
+            Simitone.Client.Utils.DiagnosticLog.Event("backend-selected", useDX ? "DirectX" : "OpenGL");
 
             FSO.Files.ImageLoaderHelpers.BitmapFunction = BitmapReader;
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-
             FSOEnvironment.SoftwareDepth = false;
             FSOEnvironment.UseMRT = true;
 
@@ -362,6 +374,8 @@ namespace Simitone.Windows
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             var exception = e.ExceptionObject;
+            Simitone.Client.Utils.DiagnosticLog.Error("unhandled-exception",
+                exception as Exception ?? new Exception("Unhandled non-Exception object"), true);
             if (exception is OutOfMemoryException)
             {
                 MessageBox.Show(e.ExceptionObject.ToString(), "Out of Memory! FreeSO needs to close.");
