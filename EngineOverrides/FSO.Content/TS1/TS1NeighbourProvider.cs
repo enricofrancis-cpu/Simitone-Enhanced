@@ -287,25 +287,40 @@ namespace FSO.Content.TS1
                     var obj = ContentManager.WorldObjects.Get(ava);
                     if (obj != null)
                     {
-                        using (var stream = new FileStream(obj.Resource.Name, FileMode.Create))
-                            obj.Resource.MainIff.Write(stream);
+                        WriteSaveFile(obj.Resource.Name, obj.Resource.MainIff);
                     }
                 }
                 DirtyAvatars.Clear();
             }
 
-            using (var stream = new FileStream(Path.Combine(UserPath, "Neighborhood.iff"), FileMode.Create, FileAccess.Write, FileShare.None))
-                MainResource.Write(stream);
-
+            WriteSaveFile(Path.Combine(UserPath, "Neighborhood.iff"), MainResource);
             return true;
         }
 
         public bool SaveHouse(int houseID, IffFile file)
         {
-            using (var stream = new FileStream(GetHousePath(houseID), FileMode.Create, FileAccess.Write, FileShare.None))
-                file.Write(stream);
-
+            WriteSaveFile(GetHousePath(houseID), file);
             return true;
+        }
+
+        private static void WriteSaveFile(string path, IffFile file)
+        {
+            var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    file.Write(stream);
+                    stream.Flush(true);
+                }
+
+                if (File.Exists(path)) File.Replace(temporary, path, null);
+                else File.Move(temporary, path);
+            }
+            finally
+            {
+                File.Delete(temporary);
+            }
         }
 
         public IffFile GetHouse(int id)

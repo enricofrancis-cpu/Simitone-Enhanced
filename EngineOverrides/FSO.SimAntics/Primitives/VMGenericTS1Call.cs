@@ -67,7 +67,9 @@ namespace FSO.SimAntics.Primitives
 
                     var guids = context.VM.TS1State.CurrentFamily.FamilyGUIDs.ToList();
                     guids.Remove(fneigh.GUID);
-                    context.VM.TS1State.CurrentFamily.FamilyGUIDs = guids.ToArray();
+                    var currentFamily = context.VM.TS1State.CurrentFamily;
+                    currentFamily.FamilyGUIDs = guids.ToArray();
+                    currentFamily.RuntimeSubset = currentFamily.RuntimeSubset?.Where(guid => guid != fneigh.GUID).ToArray();
                     TryDeleteFamily(context.VM.TS1State.CurrentFamily);
                     return VMPrimitiveExitCode.GOTO_TRUE;
                 /*
@@ -97,7 +99,7 @@ namespace FSO.SimAntics.Primitives
                 case VMGenericTS1CallMode.ChangeToLotInTemp0: //17
                     //-1 is this family's home lot
                     var switchLotId = (uint)context.Thread.TempRegisters[0];
-                    var vacation = switchLotId >= 40 && switchLotId < 50;
+                    var vacation = VMTS1VacationArrival.IsVacationLot((int)switchLotId);
                     var travelFamily = context.VM.TS1State.CurrentFamily;
                     if (travelFamily == null || !(context.Caller is VMAvatar traveler) ||
                         travelFamily.RuntimeSubset?.Contains(traveler.Object.OBJ.GUID) != true)
@@ -114,7 +116,9 @@ namespace FSO.SimAntics.Primitives
                     {
                         foreach (VMAvatar person in context.VM.Context.ObjectQueries.Avatars)
                         {
-                            if (person.GetPersonData(VMPersonDataVariable.TS1FamilyNumber) == crossData.ActiveFamily.ChunkID && person != context.Caller)
+                            if (!person.Dead && person != traveler &&
+                                travelFamily.RuntimeSubset.Contains(person.Object.OBJ.GUID) &&
+                                person.GetPersonData(VMPersonDataVariable.TS1FamilyNumber) == travelFamily.ChunkID)
                                 people.Add(person);
                         }
                     }
@@ -154,6 +158,15 @@ namespace FSO.SimAntics.Primitives
 
                     var crossDataDT = Content.Content.Get().Neighborhood.GameState;
 
+                    if (VMTS1VacationArrival.IsVacationLot(context.VM.GetGlobalValue(10)))
+                    {
+                        var arriving = context.VM.Context.ObjectQueries.Avatars.OfType<VMAvatar>().FirstOrDefault(avatar =>
+                            !avatar.Dead && avatar.Object.OBJ.GUID == crossDataDT.DowntownSimGUID);
+                        if (arriving == null) return VMPrimitiveExitCode.GOTO_FALSE;
+                        context.Thread.TempRegisters[0] = arriving.ObjectID;
+                        return VMPrimitiveExitCode.GOTO_TRUE;
+                    }
+                    if (crossDataDT.ActiveFamily == null) return VMPrimitiveExitCode.GOTO_FALSE;
                     // Activate the traveling household before the avatar inherits its TS1 visitor status.
                     crossDataDT.ActiveFamily.SelectOneMember(crossDataDT.DowntownSimGUID);
                     context.VM.TS1State.ActivateFamily(context.VM, crossDataDT.ActiveFamily);
@@ -236,6 +249,7 @@ namespace FSO.SimAntics.Primitives
                 case VMGenericTS1CallMode.BuildVacationFamilyPutFamilyNumInTemp0: //26
                     //in our implementation, vacation lots build the family in the same way as normal lots.
                     var crossData2 = Content.Content.Get().Neighborhood.GameState;
+                    if (crossData2.ActiveFamily == null) return VMPrimitiveExitCode.GOTO_FALSE;
                     if (crossData2.LotTransitInfo >= 1)
                     {
                         crossData2.ActiveFamily.SelectWholeFamily();
@@ -248,11 +262,14 @@ namespace FSO.SimAntics.Primitives
 
                         context.VM.TS1State.VerifyFamily(context.VM);
                         var party = crossData2.ActiveFamily.RuntimeSubset;
-                        var arrival = context.VM.Context.ObjectQueries.Avatars.FirstOrDefault(avatar =>
+                        var arrival = context.VM.Context.ObjectQueries.Avatars.OfType<VMAvatar>().FirstOrDefault(avatar =>
                             !avatar.Dead && party.Contains(avatar.Object.OBJ.GUID) &&
                             avatar.Object.OBJ.GUID == crossData2.DowntownSimGUID);
                         if (arrival != null)
+                        {
+                            context.VM.SetGlobalValue(3, arrival.ObjectID);
                             context.VM.SendCommand(new VMNetChangeControlCmd { TargetID = arrival.ObjectID });
+                        }
                     }
                     else
                     {
@@ -401,13 +418,13 @@ namespace FSO.SimAntics.Primitives
             family.FamilyGUIDs = guids.ToArray();
 
             //if the sim is on the lot, change their runtime person data to reflect the new family id.
-            var runtime = (VMAvatar)vm.Context.ObjectQueries.Avatars.FirstOrDefault(x => ((VMAvatar)x).GetPersonData(VMPersonDataVariable.NeighborId) == neigh.NeighbourID);
+            var runtime = (VMAvatar)vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().FirstOrDefault(x => ((VMAvatar)x).GetPersonData(VMPersonDataVariable.NeighborId) == neigh.NeighbourID);
             runtime?.SetPersonData(VMPersonDataVariable.TS1FamilyNumber, (short)family.ChunkID);
         }
 
         private VMAvatar GetRuntimeNeigh(VM vm, ushort neighborID)
         {
-            return (VMAvatar)vm.Context.ObjectQueries.Avatars.FirstOrDefault(x => ((VMAvatar)x).GetPersonData(VMPersonDataVariable.NeighborId) == neighborID);
+            return (VMAvatar)vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().FirstOrDefault(x => ((VMAvatar)x).GetPersonData(VMPersonDataVariable.NeighborId) == neighborID);
         }
     }
 

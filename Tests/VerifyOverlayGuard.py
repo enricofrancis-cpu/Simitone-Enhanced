@@ -8,7 +8,7 @@ parser=argparse.ArgumentParser(); parser.add_argument('--dotnet',default='dotnet
 root=Path(__file__).resolve().parents[1]
 groups={
  'FSO.Content': ('tso.content',['TS1/TS1NeighbourProvider.cs','TS1/TS1BCFProvider.cs','Framework/TS1Provider.cs']),
- 'FSO.SimAntics': ('tso.simantics',['Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs','Primitives/VMGenericTS1Call.cs','Engine/VMThread.cs','Engine/VMSuitProvider.cs','Entities/VMAvatar.cs','Primitives/VMShowString.cs','NetPlay/Model/Commands/VMNetChangeControlCmd.cs']),
+ 'FSO.SimAntics': ('tso.simantics',['Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs','Primitives/VMGenericTS1Call.cs','Engine/VMThread.cs','Engine/VMSuitProvider.cs','Entities/VMAvatar.cs','Primitives/VMShowString.cs','NetPlay/Model/Commands/VMNetChangeControlCmd.cs','NetPlay/Model/Commands/VMNetSimJoinCmd.cs','Engine/VMMemory.cs']),
  'FSO.LotView': ('tso.world',['Components/ObjectComponent.cs','LMap/LMapBatch.cs']),
  'FSO.Vitaboy': ('tso.vitaboy.model',['CFP.cs'])
 }

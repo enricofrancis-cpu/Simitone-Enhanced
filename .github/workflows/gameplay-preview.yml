@@ -1,4 +1,4 @@
-name: Stability preview checks
+name: Travel recovery preview checks
 
 on:
   pull_request:
@@ -62,12 +62,12 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Stability-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Travel-Recovery-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Stability-Preview-Windows-x64
-          path: release/Stability-Preview-Windows/
+          name: Simitone-Enhanced-Travel-Recovery-Preview-Windows-x64
+          path: release/Travel-Recovery-Preview-Windows/
           if-no-files-found: error
           retention-days: 30
 

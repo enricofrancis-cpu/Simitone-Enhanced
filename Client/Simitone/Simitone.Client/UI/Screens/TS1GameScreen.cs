@@ -463,21 +463,50 @@ namespace Simitone.Client.UI.Screens
 
             if (SwitchLot > 0)
             {
-                DiagnosticLog.Event("travel-request", "from=" + vm.GetGlobalValue(10) + "; to=" + SwitchLot);
-                SynchronizeFamilyFame();
-                if (!Downtown) SavedLot = vm.Save();
-                if (SwitchLot == ActiveFamily.HouseNumber && SavedLot != null)
+                var destination = SwitchLot;
+                SwitchLot = -1;
+                DiagnosticLog.Event("travel-request", "from=" + vm.GetGlobalValue(10) + "; to=" + destination);
+                var returningHome = destination == ActiveFamily?.HouseNumber;
+                var destinationPath = Content.Get().Neighborhood.GetHousePath(destination);
+                try
                 {
-                    Downtown = false;
+                    if (!(returningHome && SavedLot != null) && !File.Exists(destinationPath))
+                        throw new FileNotFoundException("Destination lot is missing.", destinationPath);
+
+                    if (!Downtown && !returningHome)
+                    {
+                        Save();
+                        SavedLot = vm.Save();
+                        DiagnosticLog.Event("travel-home-saved", "destination=" + destination);
+                    }
+                    else SynchronizeFamilyFame();
+                }
+                catch (Exception error)
+                {
+                    DiagnosticLog.Error("travel-preparation-failed", error);
+                    vm.SpeedMultiplier = 1;
+                    ShowTravelError("Travel was canceled. The destination or the home save could not be prepared.");
+                    return;
+                }
+
+                Downtown = !returningHome;
+                if (returningHome && SavedLot != null)
+                {
                     InitializeLot(SavedLot);
                     SavedLot = null;
                 }
                 else
                 {
-                    Downtown = true;
-                    InitializeLot(Content.Get().Neighborhood.GetHousePath(SwitchLot), false);
+                    InitializeLot(destinationPath, false);
+                    if (Downtown && VMTS1VacationArrival.IsVacationLot(destination) &&
+                        vm.GetGlobalValue(3) == 0 && SavedLot != null)
+                    {
+                        Downtown = false;
+                        InitializeLot(SavedLot);
+                        SavedLot = null;
+                        ShowTravelError("The traveling household could not be placed at the vacation lot. The game returned home.");
+                    }
                 }
-                SwitchLot = -1;
             }
             //vm.Context.Clock.Hours = 12;
             if (vm != null) vm.Update();
@@ -674,6 +703,7 @@ namespace Simitone.Client.UI.Screens
             vm.MyUID = 65537;
             vm.Load(marshal);
 
+            ActiveFamily?.SelectWholeFamily();
             vm.TS1State.ActivateFamily(vm, ActiveFamily);
 
             var settings = GlobalSettings.Default;
@@ -758,6 +788,13 @@ namespace Simitone.Client.UI.Screens
                     vm.TS1State.ActivateFamily(vm, ActiveFamily);
                 }
                 BlueprintReset(lotName, null);
+                if (Downtown && VMTS1VacationArrival.IsVacationLot(vm.GetGlobalValue(10)))
+                {
+                    var traveler = Content.Get().Neighborhood.GameState.DowntownSimGUID;
+                    var arrival = VMTS1VacationArrival.Prepare(vm, ActiveFamily, traveler);
+                    DiagnosticLog.Event("travel-vacation-arrival",
+                        "lot=" + vm.GetGlobalValue(10) + "; traveler=" + traveler + "; selected=" + (arrival?.ObjectID ?? 0));
+                }
                 // Read saved weather state now; apply it deferred in UpdateWeatherEffects
                 // once Blueprint is available (BlueprintReset queues a command, so Blueprint
                 // may still be null when this line runs).
@@ -921,6 +958,16 @@ namespace Simitone.Client.UI.Screens
                     Frontend?.DesktopUCP?.UpdateBuildBuy();
                     break;
             }
+        }
+
+        private void ShowTravelError(string message)
+        {
+            UIScreen.GlobalShowDialog(new UIMobileAlert(new UIAlertOptions
+            {
+                Title = "Travel",
+                Message = message,
+                Buttons = UIAlertButton.Ok()
+            }), true);
         }
 
         private void VMLotSwitch(uint lotId)
