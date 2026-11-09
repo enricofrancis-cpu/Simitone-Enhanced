@@ -1,8 +1,8 @@
-name: Travel recovery preview checks
+name: Playtest fixes preview checks
 
 on:
   pull_request:
-    branches: [enhanced-development]
+    branches: [enhanced-development, preview/travel-recovery]
   workflow_dispatch:
 
 env:
@@ -62,12 +62,12 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Travel-Recovery-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Playtest-Fixes-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Travel-Recovery-Preview-Windows-x64
-          path: release/Travel-Recovery-Preview-Windows/
+          name: Simitone-Enhanced-Playtest-Fixes-Preview-Windows-x64
+          path: release/Playtest-Fixes-Preview-Windows/
           if-no-files-found: error
           retention-days: 30
 

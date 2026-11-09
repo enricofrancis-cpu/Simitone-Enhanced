@@ -365,14 +365,22 @@ namespace Simitone.Client.UI.Panels.Desktop
                     var world = Game.vm.Context.World;
                     var cameras = world.State.Cameras;
                     var activeCamera = cameras.ActiveCamera;
+                    var holder = Game.LotControl.ObjectHolder;
+                    var holdingObject = !Game.LotControl.LiveMode && holder.Holding != null;
+                    if (holdingObject)
+                    {
+                        if (keys.Contains(Keys.OemComma)) holder.RotateObject(-2);
+                        if (keys.Contains(Keys.OemPeriod)) holder.RotateObject(2);
+                    }
+
                     if (activeCamera.UseRotateHold)
                     {
                         //if the zoom or rotation buttons are down, gradually change their values.
                         var cam = Game.vm.Context.World.State.Cameras.Camera3D;
-                        if (RotateCWButton.IsDown || state.KeyboardState.IsKeyDown(Keys.OemPeriod)) cam.RotationX += 2f / FSOEnvironment.RefreshRate;
-                        if (RotateCCWButton.IsDown || state.KeyboardState.IsKeyDown(Keys.OemComma)) cam.RotationX -= 2f / FSOEnvironment.RefreshRate;
+                        if (RotateCWButton.IsDown || (!holdingObject && state.KeyboardState.IsKeyDown(Keys.OemPeriod))) cam.RotationX += 2f / FSOEnvironment.RefreshRate;
+                        if (RotateCCWButton.IsDown || (!holdingObject && state.KeyboardState.IsKeyDown(Keys.OemComma))) cam.RotationX -= 2f / FSOEnvironment.RefreshRate;
                     }
-                    else
+                    else if (!holdingObject)
                     {
                         if (keys.Contains(Keys.OemComma)) RotateCounterClockwise(null);
                         if (keys.Contains(Keys.OemPeriod)) RotateClockwise(null);

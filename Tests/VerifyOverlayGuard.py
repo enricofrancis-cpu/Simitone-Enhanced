@@ -7,9 +7,9 @@ from xml.sax.saxutils import quoteattr
 parser=argparse.ArgumentParser(); parser.add_argument('--dotnet',default='dotnet'); args=parser.parse_args()
 root=Path(__file__).resolve().parents[1]
 groups={
- 'FSO.Content': ('tso.content',['TS1/TS1NeighbourProvider.cs','TS1/TS1BCFProvider.cs','Framework/TS1Provider.cs']),
- 'FSO.SimAntics': ('tso.simantics',['Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs','Primitives/VMGenericTS1Call.cs','Engine/VMThread.cs','Engine/VMSuitProvider.cs','Entities/VMAvatar.cs','Primitives/VMShowString.cs','NetPlay/Model/Commands/VMNetChangeControlCmd.cs','NetPlay/Model/Commands/VMNetSimJoinCmd.cs','Engine/VMMemory.cs']),
- 'FSO.LotView': ('tso.world',['Components/ObjectComponent.cs','LMap/LMapBatch.cs']),
+ 'FSO.Content': ('tso.content',['WorldRoofProvider.cs','TS1/TS1JobProvider.cs','TS1/TS1NeighbourProvider.cs','TS1/TS1BCFProvider.cs','Framework/TS1Provider.cs']),
+ 'FSO.SimAntics': ('tso.simantics',['Marshals/VMResourceIDMarshal.cs','Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs','Primitives/VMGenericTS1Call.cs','Engine/VMThread.cs','Engine/VMSuitProvider.cs','Entities/VMAvatar.cs','Primitives/VMShowString.cs','NetPlay/Model/Commands/VMNetChangeControlCmd.cs','NetPlay/Model/Commands/VMNetSimJoinCmd.cs','Engine/VMMemory.cs']),
+ 'FSO.LotView': ('tso.world',['Components/RoofComponent.cs','Components/ObjectComponent.cs','LMap/LMapBatch.cs']),
  'FSO.Vitaboy': ('tso.vitaboy.model',['CFP.cs'])
 }
 for project_name,(directory,names) in groups.items():
