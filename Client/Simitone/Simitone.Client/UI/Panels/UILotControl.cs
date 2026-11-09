@@ -551,6 +551,11 @@ namespace Simitone.Client.UI.Panels
                                 PieMenu.Y = state.MouseState.Y / FSOEnvironment.DPIScaleFactor;
                                 PieMenu.UpdateHeadPosition(state.MouseState.X, state.MouseState.Y);
                             }
+                            else if (vacation && (clicked.Object.OBJ.GUID == 0x3A9F5D30 || obj.Object.OBJ.GUID == 0x3A9F5D30)
+                                && GameFacade.Screens.CurrentUIScreen is TS1GameScreen game)
+                            {
+                                game.OfferVacationReturnHome();
+                            }
                         }
                     }
 

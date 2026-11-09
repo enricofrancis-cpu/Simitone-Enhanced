@@ -970,6 +970,28 @@ namespace Simitone.Client.UI.Screens
             }), true);
         }
 
+        public void OfferVacationReturnHome()
+        {
+            if (!Downtown || ActiveFamily == null || SavedLot == null || SwitchLot > 0 ||
+                !VMTS1VacationArrival.IsVacationLot(vm.GetGlobalValue(10))) return;
+
+            var source = vm;
+            UIMobileAlert alert = null;
+            alert = new UIMobileAlert(new UIAlertOptions
+            {
+                Title = "Return Home",
+                Message = "This pay phone has no available travel actions. Return directly to your saved home lot?",
+                Buttons = UIAlertButton.YesNo(b =>
+                {
+                    alert.Close();
+                    if (vm != source || SwitchLot > 0) return;
+                    DiagnosticLog.Event("vacation-return-fallback", "lot=" + vm.GetGlobalValue(10));
+                    VMLotSwitch((uint)ActiveFamily.HouseNumber);
+                }, null)
+            });
+            GlobalShowDialog(alert, true);
+        }
+
         private void VMLotSwitch(uint lotId)
         {
             vm.SpeedMultiplier = 0;

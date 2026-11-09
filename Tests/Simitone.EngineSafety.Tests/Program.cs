@@ -40,6 +40,33 @@ try {
     var snapshots=Directory.GetFiles(characters).ToDictionary(p=>p,Hash);
     // Bypass only the asset-loading constructor; exercise the production LoadCharacters method.
     var content=(Content)RuntimeHelpers.GetUninitializedObject(typeof(Content));
+    var jobLevel = (JobLevel)RuntimeHelpers.GetUninitializedObject(typeof(JobLevel));
+    jobLevel.Salary = 250;
+    jobLevel.CarType = 3;
+    var jobs = (TS1JobProvider)RuntimeHelpers.GetUninitializedObject(typeof(TS1JobProvider));
+    jobs.JobResource = new IffFile();
+    jobs.JobResource.AddChunk(new CARR { ChunkID = 1, ChunkProcessed = true, JobLevels = new[] { jobLevel } });
+    Check(jobs.GetJobData(1, -1, 0) == 1, "career level count requires a current level");
+    Check(jobs.GetJobData(1, -1, 21) == 0 && jobs.GetJobData(1, 1, 21) == 0, "invalid car lookup level escaped the guard");
+    Check(jobs.GetJobData(1, 0, -1) == 0 && jobs.GetJobData(1, 0, 23) == 0, "invalid job selector escaped the guard");
+    Check(jobs.GetJobData(1, 0, 1) == 250 && jobs.GetJobData(1, 0, 21) == 3, "valid salary or car lookup changed");
+    Check(jobs.GetJobData(2, 0, 21) == 0, "missing career lookup changed");
+
+    content.TS1 = true;
+    content.TS1BasePath = root;
+    content.TS1AllFiles = new[] { "GameData/Roofs/default.bmp", "GameData/Roofs/tile.bmp" };
+    var roofs = new WorldRoofProvider(content);
+    roofs.Init();
+    Check(roofs.IDToName(-1) == "default.bmp" && roofs.IDToName(2) == "default.bmp", "missing roof did not select the default");
+    Check(roofs.IDToName(1) == "tile.bmp", "valid roof selection changed");
+    content.TS1AllFiles = Array.Empty<string>();
+    var emptyRoofs = new WorldRoofProvider(content);
+    emptyRoofs.Init();
+    Check(emptyRoofs.IDToName(0) == "", "empty roof catalog did not report a missing texture");
+
+    content.TS1 = false;
+    content.TS1BasePath = null;
+    content.TS1AllFiles = null;
     var objects=new TS1ObjectProvider(content,new TS1Provider(content)) { Entries=new() };
     content.WorldObjects=objects;
     var neighborhood=(TS1NeighborhoodProvider)RuntimeHelpers.GetUninitializedObject(typeof(TS1NeighborhoodProvider));
