@@ -451,6 +451,12 @@ namespace Simitone.Client.UI.Panels
             return ((point - middle).ToVector2() / World.BackbufferScale).ToPoint() + middle;
         }
 
+        private static bool IsVacationPayPhone(VMEntity entity)
+        {
+            var guid = entity.Object.OBJ.GUID;
+            return guid == 0x6954E030 || guid == 0x3A9F5D30;
+        }
+
         public void ShowPieMenu(Point point, UpdateState state)
         {
             if (!LiveMode)
@@ -551,7 +557,7 @@ namespace Simitone.Client.UI.Panels
                                 PieMenu.Y = state.MouseState.Y / FSOEnvironment.DPIScaleFactor;
                                 PieMenu.UpdateHeadPosition(state.MouseState.X, state.MouseState.Y);
                             }
-                            else if (vacation && (clicked.Object.OBJ.GUID == 0x3A9F5D30 || obj.Object.OBJ.GUID == 0x3A9F5D30)
+                            else if (vacation && (IsVacationPayPhone(clicked) || IsVacationPayPhone(obj))
                                 && GameFacade.Screens.CurrentUIScreen is TS1GameScreen game)
                             {
                                 game.OfferVacationReturnHome();
@@ -879,20 +885,21 @@ namespace Simitone.Client.UI.Panels
             foreach (VMAvatar avatar in vm.Context.ObjectQueries.Avatars)
             {
                 if (avatar.Avatar == null) continue;
-                var isActive = (avatar == ActiveEntity);
-                if (plumb != null && (avatar.Avatar.HeadObject == plumb) != isActive)
+                var isActive = avatar == ActiveEntity;
+                var marker = isActive ? plumb : null;
+                if (!isActive && avatar.GetValue(FSO.SimAntics.Model.VMStackObjectVariable.Category) == 87)
+                    marker = ClassicStarBob.Get(Content.Get());
+
+                if (avatar.Avatar.HeadObject != marker)
                 {
-                    avatar.Avatar.HeadObject = (avatar == ActiveEntity) ? plumb : null;
-                    avatar.Avatar.HeadObjectSpeedyVel = 0.2f;
+                    avatar.Avatar.HeadObject = marker;
+                    if (isActive) avatar.Avatar.HeadObjectSpeedyVel = 0.2f;
                 }
                 avatar.Avatar.HeadObjectRotation += 3f / FSOEnvironment.RefreshRate;
                 if (isActive)
                 {
                     avatar.Avatar.HeadObjectRotation += avatar.Avatar.HeadObjectSpeedyVel;
                     avatar.Avatar.HeadObjectSpeedyVel *= 0.98f;
-                } else if (avatar.GetValue(FSO.SimAntics.Model.VMStackObjectVariable.Category) == 87)
-                {
-                    avatar.Avatar.HeadObject = Content.Get().RCMeshes.Get("star.fsom");
                 }
             }
             /*

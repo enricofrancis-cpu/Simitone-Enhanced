@@ -48,6 +48,8 @@ namespace FSO.LotView.Components
             this.Effect = WorldContent.GrassEffect;
         }
 
+        private Texture2D FallbackTexture;
+
         private void PrepTextures(GraphicsDevice device)
         {
             // TODO: content system for roof textures so they can be reused
@@ -66,8 +68,12 @@ namespace FSO.LotView.Components
             if (name.Length == 0)
             {
                 TexRescale = 1f;
-                Texture = new Texture2D(device, 1, 1);
-                Texture.SetData(new[] { new Color(110, 95, 85) });
+                if (FallbackTexture == null)
+                {
+                    FallbackTexture = new Texture2D(device, 1, 1);
+                    FallbackTexture.SetData(new[] { new Color(110, 95, 85) });
+                }
+                Texture = FallbackTexture;
             }
             else try
             {
@@ -770,6 +776,8 @@ namespace FSO.LotView.Components
 
         public void Dispose()
         {
+            FallbackTexture?.Dispose();
+            FallbackTexture = null;
             ParallaxTexture?.Dispose();
             NormalMap?.Dispose();
             EdgeTexture?.Dispose();
