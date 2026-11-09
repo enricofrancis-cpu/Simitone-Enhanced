@@ -9,6 +9,7 @@ using FSO.HIT;
 using FSO.SimAntics;
 using Microsoft.Xna.Framework;
 using Simitone.Client.UI.Controls;
+using Simitone.Client.UI.Screens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -132,7 +133,7 @@ namespace Simitone.Client.UI.Panels
 
             MouseEvent.Region = OuterBg.GetBounds();
             
-            var speed = RemapSpeed[Math.Max(0, VM.SpeedMultiplier)];
+            var speed = VM.SpeedMultiplier == TS1GameScreen.SleepingSpeed ? 3 : RemapSpeed[Math.Max(0, VM.SpeedMultiplier)];
             if (speed != LastSpeed)
             {
                 if (speed == 4) InnerBg.Texture = Content.Get().CustomUI.Get("clockinbg_pause.png").Get(GameFacade.GraphicsDevice);

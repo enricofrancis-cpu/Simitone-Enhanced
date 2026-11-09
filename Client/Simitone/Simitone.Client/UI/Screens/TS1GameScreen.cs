@@ -22,12 +22,14 @@ using FSO.SimAntics.NetPlay;
 using FSO.SimAntics.NetPlay.Drivers;
 using FSO.SimAntics.NetPlay.Model;
 using FSO.SimAntics.NetPlay.Model.Commands;
+using FSO.SimAntics.Primitives;
 using FSO.SimAntics.Utils;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Simitone.Client.UI.Controls;
 using Simitone.Client.UI.Panels;
+using Simitone.Client.UI.Panels.LotControls;
 using Simitone.Client.UI.Panels.WorldUI;
 using Simitone.Client.Utils;
 using Simitone.Client.Services;
@@ -307,6 +309,41 @@ namespace Simitone.Client.UI.Screens
         private int SpeedBeforeAutoFastForward;
         private bool AutoFastForwardDeclined; // the user changed speed while everyone was away
 
+        internal const int SleepingSpeed = 5;
+        private int SpeedBeforeSleep;
+        private bool SleepFastForwardDeclined;
+
+        private void UpdateSleepingSpeed()
+        {
+            if (Downtown || vm?.Ready != true || vm.TS1State?.CurrentFamily == null) return;
+            var present = vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().Where(sim =>
+                !sim.Dead && !sim.IsPet && sim.Position != LotTilePos.OUT_OF_WORLD);
+            var allAsleep = present.Any() && present.All(sim =>
+                sim.GetMotiveData(FSO.SimAntics.Model.VMMotive.SleepState) != 0);
+            if (!allAsleep)
+            {
+                if (vm.SpeedMultiplier == SleepingSpeed)
+                {
+                    vm.SpeedMultiplier = SpeedBeforeSleep;
+                    vm.ResetTickAlign();
+                }
+                SleepFastForwardDeclined = false;
+                SpeedBeforeSleep = 0;
+                return;
+            }
+            if (SpeedBeforeSleep != 0 && vm.SpeedMultiplier != SleepingSpeed)
+            {
+                SleepFastForwardDeclined = true;
+                SpeedBeforeSleep = 0;
+            }
+            if (!SleepFastForwardDeclined && vm.SpeedMultiplier > 0 && vm.SpeedMultiplier < SleepingSpeed)
+            {
+                SpeedBeforeSleep = vm.SpeedMultiplier;
+                vm.SpeedMultiplier = SleepingSpeed;
+                vm.ResetTickAlign();
+            }
+        }
+
         private void UpdateAutoFastForward()
         {
             var family = vm?.TS1State?.CurrentFamily;
@@ -425,7 +462,8 @@ namespace Simitone.Client.UI.Screens
                 GameThread.NextUpdate((FSO.Common.Rendering.Framework.Model.UpdateState ustate) => ChangeSpeedTo(0));
             }
             base.Update(state);
-            UpdateAutoFastForward();
+            UpdateSleepingSpeed();
+            if (vm?.SpeedMultiplier != SleepingSpeed) UpdateAutoFastForward();
 
             // Update weather effects (sounds and terrain)
             UpdateWeatherEffects();
@@ -465,6 +503,8 @@ namespace Simitone.Client.UI.Screens
             {
                 var destination = SwitchLot;
                 SwitchLot = -1;
+                var vacationPhoneTrip = VacationPhoneTravelPending;
+                VacationPhoneTravelPending = false;
                 DiagnosticLog.Event("travel-request", "from=" + vm.GetGlobalValue(10) + "; to=" + destination);
                 var returningHome = destination == ActiveFamily?.HouseNumber;
                 var destinationPath = Content.Get().Neighborhood.GetHousePath(destination);
@@ -492,17 +532,32 @@ namespace Simitone.Client.UI.Screens
                 Downtown = !returningHome;
                 if (returningHome && SavedLot != null)
                 {
-                    InitializeLot(SavedLot);
+                    var clock = vm.Context.Clock;
+                    InitializeLot(SavedLot, clock.Hours * 60 + clock.Minutes);
                     SavedLot = null;
                 }
                 else
                 {
-                    InitializeLot(destinationPath, false);
+                    var clock = vm.Context.Clock;
+                    var departureMinute = clock.Hours * 60 + clock.Minutes;
+                    try
+                    {
+                        InitializeLot(destinationPath, false);
+                    }
+                    catch (Exception error) when (vacationPhoneTrip && SavedLot != null && !(error is OutOfMemoryException))
+                    {
+                        DiagnosticLog.Error("vacation-phone-destination-failed", error);
+                        Downtown = false;
+                        InitializeLot(SavedLot, departureMinute);
+                        SavedLot = null;
+                        ShowTravelError("The destination could not be loaded. The household returned home.");
+                        return;
+                    }
                     if (Downtown && VMTS1VacationArrival.IsVacationLot(destination) &&
                         vm.GetGlobalValue(3) == 0 && SavedLot != null)
                     {
                         Downtown = false;
-                        InitializeLot(SavedLot);
+                        InitializeLot(SavedLot, departureMinute);
                         SavedLot = null;
                         ShowTravelError("The traveling household could not be placed at the vacation lot. The game returned home.");
                     }
@@ -637,6 +692,7 @@ namespace Simitone.Client.UI.Screens
         }
 
         private VMMarshal SavedLot;
+        private bool VacationPhoneTravelPending;
 
         private void SynchronizeFamilyFame()
         {
@@ -657,7 +713,15 @@ namespace Simitone.Client.UI.Screens
         public void InitializeLot()
         {
             CleanupLastWorld();
-            World = new FSO.LotView.World(GameFacade.GraphicsDevice);
+            SpeedBeforeSleep = 0;
+            SleepFastForwardDeclined = false;
+            World = new LotBackdropWorld(GameFacade.GraphicsDevice, () =>
+            {
+                var terrain = vm?.Context?.Architecture?.Terrain;
+                var type = TerrainSnowApplied ? FSO.Content.Model.TerrainType.SNOW :
+                    terrain?.LightType ?? FSO.Content.Model.TerrainType.GRASS;
+                return (int)type;
+            });
 
             World.Opacity = 1;
             GameFacade.Scenes.Add(World);
@@ -696,12 +760,21 @@ namespace Simitone.Client.UI.Screens
             vm.OnGenericVMEvent += Vm_OnGenericVMEvent;
         }
 
-        public void InitializeLot(VMMarshal marshal)
+        public void InitializeLot(VMMarshal marshal, int? arrivalMinute = null)
         {
             DiagnosticLog.Event("lot-load-home-snapshot");
             InitializeLot();
             vm.MyUID = 65537;
             vm.Load(marshal);
+            if (arrivalMinute.HasValue)
+            {
+                // Carry the public lot's wall-clock time while retaining the home's
+                // saved calendar, simulation counters and household state.
+                var clock = vm.Context.Clock;
+                clock.Hours = arrivalMinute.Value / 60;
+                clock.Minutes = arrivalMinute.Value % 60;
+                clock.MinuteFractions = 0;
+            }
 
             ActiveFamily?.SelectWholeFamily();
             vm.TS1State.ActivateFamily(vm, ActiveFamily);
@@ -970,26 +1043,62 @@ namespace Simitone.Client.UI.Screens
             }), true);
         }
 
-        public void OfferVacationReturnHome()
+        public void OfferVacationPhoneTravel()
         {
             if (!Downtown || ActiveFamily == null || SavedLot == null || SwitchLot > 0 ||
                 !VMTS1VacationArrival.IsVacationLot(vm.GetGlobalValue(10))) return;
 
             var source = vm;
-            UIMobileAlert alert = null;
-            alert = new UIMobileAlert(new UIAlertOptions
+            var current = vm.GetGlobalValue(10);
+            var family = ActiveFamily;
+            var traveler = LotControl.ActiveEntity as VMAvatar;
+            var neighborhood = Content.Get().Neighborhood;
+            var destinations = new List<(int Lot, string Name)> { (family.HouseNumber, "Go Home") };
+            foreach (var lot in Enumerable.Range(40, 10))
             {
-                Title = "Return Home",
-                Message = "This pay phone has no available travel actions. Return directly to your saved home lot?",
-                Buttons = UIAlertButton.YesNo(b =>
+                if (lot == current || !File.Exists(neighborhood.GetHousePath(lot))) continue;
+                var name = neighborhood.GetHouseNameDesc(lot)?.Item1;
+                destinations.Add((lot, string.IsNullOrWhiteSpace(name) ? "Vacation lot " + lot : name));
+            }
+
+            GlobalShowDialog(new UIVacationTravelAlert(destinations, lot =>
+            {
+                if (vm != source || ActiveFamily != family || SwitchLot > 0) return;
+                if (lot != family.HouseNumber)
                 {
-                    alert.Close();
-                    if (vm != source || SwitchLot > 0) return;
-                    DiagnosticLog.Event("vacation-return-fallback", "lot=" + vm.GetGlobalValue(10));
-                    VMLotSwitch((uint)ActiveFamily.HouseNumber);
-                }, null)
-            });
-            GlobalShowDialog(alert, true);
+                    try
+                    {
+                        var destination = neighborhood.GetHouse(lot);
+                        var embedded = destination.List<FSOV>()?.FirstOrDefault();
+                        if (embedded != null)
+                        {
+                            using var reader = new BinaryReader(new MemoryStream(embedded.Data));
+                            new VMMarshal().Deserialize(reader);
+                        }
+                        else if (destination.Get<HOUS>(0) == null || destination.Get<ARRY>(8) == null)
+                        {
+                            throw new InvalidDataException("The destination is missing its lot layout.");
+                        }
+
+                        if (traveler == null || traveler.Dead || vm.GetObjectById(traveler.ObjectID) != traveler ||
+                            !VMGenericTS1Call.PrepareLotTravel(vm, traveler, (uint)lot))
+                        {
+                            ShowTravelError("Select a household member to make the trip.");
+                            return;
+                        }
+                        VacationPhoneTravelPending = true;
+                    }
+                    catch (Exception error) when (!(error is OutOfMemoryException))
+                    {
+                        DiagnosticLog.Error("vacation-phone-preflight-failed", error);
+                        ShowTravelError("That vacation lot could not be opened.");
+                        return;
+                    }
+                }
+
+                DiagnosticLog.Event("vacation-phone-travel", "from=" + current + "; to=" + lot);
+                VMLotSwitch((uint)lot);
+            }), true);
         }
 
         private void VMLotSwitch(uint lotId)
@@ -1061,7 +1170,8 @@ namespace Simitone.Client.UI.Screens
 
         public void ReturnToNeighbourhood()
         {
-            if (CloseAlert == null)
+            var lot = vm;
+            if (lot != null && CloseAlert == null)
             {
                 CloseAlert = new UIMobileAlert(new FSO.Client.UI.Controls.UIAlertOptions
                 {
@@ -1069,13 +1179,21 @@ namespace Simitone.Client.UI.Screens
                     Message = GameFacade.Strings.GetString("153", "4"), //Do you want to save the game?
                     Buttons =
                     UIAlertButton.YesNoCancel(
-                        (b) => { Save(); ExitLot(); CloseAlert.Close(); CloseAlert = null; },
-                        (b) => { ExitLot(); CloseAlert.Close(); CloseAlert = null; },
+                        (b) => CompleteReturnToNeighbourhood(lot, true),
+                        (b) => CompleteReturnToNeighbourhood(lot, false),
                         (b) => { CloseAlert.Close(); CloseAlert = null; }
                         )
                 });
                 GlobalShowDialog(CloseAlert, true);
             }
+        }
+
+        private void CompleteReturnToNeighbourhood(VM lot, bool save)
+        {
+            if (save && vm == lot) Save();
+            CloseAlert.Close();
+            CloseAlert = null;
+            if (vm == lot) ExitLot();
         }
 
         public void Save()

@@ -99,58 +99,8 @@ namespace FSO.SimAntics.Primitives
                 case VMGenericTS1CallMode.ChangeToLotInTemp0: //17
                     //-1 is this family's home lot
                     var switchLotId = (uint)context.Thread.TempRegisters[0];
-                    var vacation = VMTS1VacationArrival.IsVacationLot((int)switchLotId);
-                    var travelFamily = context.VM.TS1State.CurrentFamily;
-                    if (travelFamily == null || !(context.Caller is VMAvatar traveler) ||
-                        travelFamily.RuntimeSubset?.Contains(traveler.Object.OBJ.GUID) != true)
+                    if (!PrepareLotTravel(context.VM, context.Caller as VMAvatar, switchLotId))
                         return VMPrimitiveExitCode.GOTO_FALSE;
-
-                    var crossData = Content.Content.Get().Neighborhood.GameState;
-                    crossData.ActiveFamily = travelFamily;
-                    crossData.DowntownSimGUID = traveler.Object.OBJ.GUID;
-                    crossData.LotTransitInfo = (vacation) ? (short)1 : context.VM.GetGlobalValue(34);
-                    var people = new List<VMAvatar>();
-
-                    people.Add(traveler);
-                    if (crossData.LotTransitInfo >= 1)
-                    {
-                        foreach (VMAvatar person in context.VM.Context.ObjectQueries.Avatars)
-                        {
-                            if (!person.Dead && person != traveler &&
-                                travelFamily.RuntimeSubset.Contains(person.Object.OBJ.GUID) &&
-                                person.GetPersonData(VMPersonDataVariable.TS1FamilyNumber) == travelFamily.ChunkID)
-                                people.Add(person);
-                        }
-                    }
-
-                    int pi = 0;
-                    foreach (var person in people)
-                    {
-                        var nid = person.GetPersonData(VMPersonDataVariable.NeighborId);
-                        var dtInv = InitInventory(nid);
-
-                        SaveIData(dtInv, 0, person.GetMotiveData(VMMotive.Bladder));
-                        SaveIData(dtInv, 1, person.GetMotiveData(VMMotive.Comfort));
-                        SaveIData(dtInv, 2, person.GetMotiveData(VMMotive.Energy));
-                        SaveIData(dtInv, 3, person.GetMotiveData(VMMotive.Fun));
-                        SaveIData(dtInv, 4, person.GetMotiveData(VMMotive.Hunger));
-                        SaveIData(dtInv, 5, person.GetMotiveData(VMMotive.Hygiene));
-                        SaveIData(dtInv, 6, person.GetMotiveData(VMMotive.Social));
-
-                        if (crossData.LotTransitInfo > 1)
-                            SaveIData(dtInv, 9, (short)context.VM.TS1State.CurrentFamily.FamilyGUIDs.Length);
-
-                        if (pi++ == 0)
-                        {
-                            SaveIData(dtInv, 7, (short)context.VM.Context.Clock.Hours);
-                            SaveIData(dtInv, 8, (short)context.VM.Context.Clock.Minutes);
-                        }
-                    }
-
-                    //the original game sends avatar motive data along in their inventory under type 2
-                    //this is called "inventory sim data effects"
-
-
                     context.VM.SignalLotSwitch(switchLotId);
                     return VMPrimitiveExitCode.GOTO_TRUE_NEXT_TICK;
                 case VMGenericTS1CallMode.BuildTheDowntownSimAndPlaceObjIDInTemp0: //18
@@ -359,12 +309,65 @@ namespace FSO.SimAntics.Primitives
             return VMPrimitiveExitCode.GOTO_TRUE;
         }
 
+        public static bool PrepareLotTravel(VM vm, VMAvatar traveler, uint switchLotId)
+        {
+            var vacation = VMTS1VacationArrival.IsVacationLot((int)switchLotId);
+            var travelFamily = vm.TS1State.CurrentFamily;
+            if (travelFamily == null || traveler == null ||
+                travelFamily.RuntimeSubset?.Contains(traveler.Object.OBJ.GUID) != true)
+                return false;
+
+            var crossData = Content.Content.Get().Neighborhood.GameState;
+            crossData.ActiveFamily = travelFamily;
+            crossData.DowntownSimGUID = traveler.Object.OBJ.GUID;
+            crossData.LotTransitInfo = (vacation) ? (short)1 : vm.GetGlobalValue(34);
+            var people = new List<VMAvatar>();
+
+            people.Add(traveler);
+            if (crossData.LotTransitInfo >= 1)
+            {
+                foreach (VMAvatar person in vm.Context.ObjectQueries.Avatars)
+                {
+                    if (!person.Dead && person != traveler &&
+                        travelFamily.RuntimeSubset.Contains(person.Object.OBJ.GUID) &&
+                        person.GetPersonData(VMPersonDataVariable.TS1FamilyNumber) == travelFamily.ChunkID)
+                        people.Add(person);
+                }
+            }
+
+            int pi = 0;
+            foreach (var person in people)
+            {
+                var nid = person.GetPersonData(VMPersonDataVariable.NeighborId);
+                var dtInv = InitInventory(nid);
+
+                SaveIData(dtInv, 0, person.GetMotiveData(VMMotive.Bladder));
+                SaveIData(dtInv, 1, person.GetMotiveData(VMMotive.Comfort));
+                SaveIData(dtInv, 2, person.GetMotiveData(VMMotive.Energy));
+                SaveIData(dtInv, 3, person.GetMotiveData(VMMotive.Fun));
+                SaveIData(dtInv, 4, person.GetMotiveData(VMMotive.Hunger));
+                SaveIData(dtInv, 5, person.GetMotiveData(VMMotive.Hygiene));
+                SaveIData(dtInv, 6, person.GetMotiveData(VMMotive.Social));
+
+                if (crossData.LotTransitInfo > 1)
+                    SaveIData(dtInv, 9, (short)vm.TS1State.CurrentFamily.FamilyGUIDs.Length);
+
+                if (pi++ == 0)
+                {
+                    SaveIData(dtInv, 7, (short)vm.Context.Clock.Hours);
+                    SaveIData(dtInv, 8, (short)vm.Context.Clock.Minutes);
+                }
+            }
+
+            return true;
+        }
+
         private short GetIData(List<InventoryItem> inventory, uint guid)
         {
             return (short)(inventory.FirstOrDefault(x => x.Type == 2 && x.GUID == guid)?.Count ?? 0);
         }
 
-        private void SaveIData(List<InventoryItem> inventory, uint guid, short data)
+        private static void SaveIData(List<InventoryItem> inventory, uint guid, short data)
         {
             var replace = inventory.FirstOrDefault(x => x.Type == 2 && x.GUID == guid);
             if (replace == null)
@@ -375,7 +378,7 @@ namespace FSO.SimAntics.Primitives
             replace.Count = (ushort)data;
         }
 
-        private List<InventoryItem> InitInventory(short neighbour)
+        private static List<InventoryItem> InitInventory(short neighbour)
         {
             var neighbourhood = Content.Content.Get().Neighborhood;
             var inventory = neighbourhood.GetInventoryByNID(neighbour);

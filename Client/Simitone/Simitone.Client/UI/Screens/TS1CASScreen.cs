@@ -181,7 +181,7 @@ namespace Simitone.Client.UI.Screens
         private bool MissingAppearanceShown;
         private bool HasAppearanceChoices => SkinCatalog.HasCompatibleSelection(ActiveHeads, ActiveBodies);
 
-        private static bool CanRenderAppearance(string name)
+        internal static bool CanRenderAppearance(string name)
         {
             var content = Content.Get();
             var appearance = content.AvatarAppearances.Get(name + ".apr");
@@ -918,10 +918,10 @@ namespace Simitone.Client.UI.Screens
             var hand = (x.Gender > 1) ? "u" : ((x.Gender == 0) ? "m" : "f");
             info.BodyStringReplace[17] = "H" + hand + "LO,HAND=" + "huao" + x.HandgroupTex;
             info.BodyStringReplace[18] = "H" + hand + "RO,HAND=" + "huao" + x.HandgroupTex;
-            info.BodyStringReplace[19] = "H" + hand + "LP,HAND=" + "huao" + x.HandgroupTex;
-            info.BodyStringReplace[20] = "H" + hand + "RP,HAND=" + "huao" + x.HandgroupTex;
-            info.BodyStringReplace[21] = "H" + hand + "LO,HAND=" + "huao" + x.HandgroupTex;
-            info.BodyStringReplace[22] = "H" + hand + "RC,HAND=" + "huao" + x.HandgroupTex;
+            info.BodyStringReplace[19] = "H" + hand + "LP,HAND=" + "huap" + x.HandgroupTex;
+            info.BodyStringReplace[20] = "H" + hand + "RP,HAND=" + "huap" + x.HandgroupTex;
+            info.BodyStringReplace[21] = "H" + hand + "LC,HAND=" + "huac" + x.HandgroupTex;
+            info.BodyStringReplace[22] = "H" + hand + "RC,HAND=" + "huac" + x.HandgroupTex;
             return info;
         }
 
