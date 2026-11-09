@@ -159,6 +159,20 @@ namespace Simitone.Client.UI.Panels.LotControls
             }
         }
 
+        private static string GetContactName(Neighbour neighbor)
+        {
+            if (neighbor == null) return "Unknown";
+            var stored = neighbor.Name;
+            if (!string.IsNullOrWhiteSpace(stored) &&
+                !(stored.StartsWith("user", StringComparison.OrdinalIgnoreCase) &&
+                  stored.Length > 4 && stored.Skip(4).All(char.IsDigit))) return stored;
+
+            var obj = Content.Get().WorldObjects.Get(neighbor.GUID);
+            if (obj == null) return "Unknown";
+            var title = obj.Resource.Get<CTSS>(obj.OBJ.CatalogStringsID)?.GetString(0);
+            return !string.IsNullOrWhiteSpace(title) ? title : obj.OBJ.ChunkLabel ?? "Unknown";
+        }
+
         private void FamilyList_OnSelectionChange(int obj)
         {
             var nb = Content.Get().Neighborhood;
@@ -170,7 +184,7 @@ namespace Simitone.Client.UI.Panels.LotControls
             {
                 var people = NeighborsByFamilyID.ElementAt(SelectedFamily).Value;
                 NeighbourList.BackingList = 
-                    people.Select(x => nb.GetNeighborByID(x)?.Name ?? "Unknown").ToList();
+                    people.Select(x => GetContactName(nb.GetNeighborByID(x))).ToList();
             }
             NeighbourList.Refresh();
             NeighbourList_OnSelectionChange(-1);

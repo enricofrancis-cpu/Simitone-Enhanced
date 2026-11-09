@@ -147,7 +147,7 @@ namespace Simitone.Client.UI.Controls
 
         public UIVertGrad() : base()
         {
-            Grad = Content.Get().CustomUI.Get("dialog_title_grad.png").Get(GameFacade.GraphicsDevice);
+            Grad = UIStyle.GetBlueChrome("dialog_title_grad.png", GameFacade.GraphicsDevice);
         }
 
         public override void Draw(UISpriteBatch batch)

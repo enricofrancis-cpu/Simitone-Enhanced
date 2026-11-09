@@ -20,6 +20,7 @@ using FSO.HIT;
 
 using FSO.LotView;
 using FSO.SimAntics;
+using FSO.SimAntics.Model;
 using FSO.SimAntics.Entities;
 using FSO.LotView.Components;
 using Microsoft.Xna.Framework.Input;
@@ -76,6 +77,7 @@ namespace Simitone.Client.UI.Panels
         public UIInteractionQueue Queue;
 
         public bool LiveMode = true;
+        public bool ShowPortalMarkers;
         public bool PanelActive = false;
         public UILotControlTouchHelper Touch;
         public UIArchTouchHelper ArchTouch;
@@ -783,9 +785,56 @@ namespace Simitone.Client.UI.Panels
             LastZoom = World.State.Zoom;
         }
 
+        private const int PortalMarkerRadius = 8;
+
+        private IEnumerable<(VMEntity Entity, Vector2 Center, Color Color)> GetPortalMarkers()
+        {
+            if (!ShowPortalMarkers || !vm.Ready) yield break;
+            var held = ObjectHolder.Holding;
+            foreach (var entity in vm.Entities)
+            {
+                var guid = entity.Object.OBJ.GUID;
+                var car = guid == 0x865A6812 || guid == 0xD564C66B;
+                if ((!car && guid != 0x81E6BEF9) || entity.Position == LotTilePos.OUT_OF_WORLD ||
+                    entity.Position.Level != World.State.Level || entity.WorldUI == null || entity.GhostImage ||
+                    held?.RealEnt?.MultitileGroup == entity.MultitileGroup) continue;
+                yield return (entity, PortalMarkerCenter(entity), car ? Color.Gold : Color.DeepSkyBlue);
+            }
+        }
+
+        private Vector2 PortalMarkerCenter(VMEntity entity)
+        {
+            var screen = GameFacade.Screens.CurrentUIScreen;
+            var mid = new Vector2(screen.ScreenWidth, screen.ScreenHeight) * 0.5f;
+            var projected = entity.WorldUI.GetScreenPos(World.State);
+            return (mid + (projected - mid) * World.BackbufferScale) / FSOEnvironment.DPIScaleFactor;
+        }
+
+        internal short PickPortalMarker(Point mouse)
+        {
+            if (!vm.Context.Cheats.MoveObjects) return 0;
+            var pointer = GlobalPoint(mouse.ToVector2());
+            foreach (var marker in GetPortalMarkers())
+            {
+                var delta = marker.Center - pointer;
+                if (Math.Abs(delta.X) <= PortalMarkerRadius && Math.Abs(delta.Y) <= PortalMarkerRadius)
+                    return marker.Entity.ObjectID;
+            }
+            return 0;
+        }
+
         public override void Draw(UISpriteBatch batch)
         {
-            //DrawLocalTexture(batch, World.State.Light.LightMap, new Rectangle(0,0, World.State.Light.LightMap.Width/3, World.State.Light.LightMap.Height/2), new Vector2());
+            foreach (var marker in GetPortalMarkers())
+                DrawPortalMarker(batch, marker.Center, marker.Color);
+
+            var held = ObjectHolder.Holding;
+            if (ShowPortalMarkers && held?.PortalMarkerColor is Color portalColor)
+            {
+                var entity = held.Group.BaseObject;
+                DrawPortalMarker(batch, PortalMarkerCenter(entity),
+                    held.CanPlace == VMPlacementError.Success ? portalColor : Color.OrangeRed);
+            }
             if (RMBScroll)
             {
                 DrawLocalTexture(batch, RMBCursor, new Vector2(RMBScrollX - RMBCursor.Width / 2, RMBScrollY - RMBCursor.Height / 2));
@@ -793,7 +842,16 @@ namespace Simitone.Client.UI.Panels
             base.Draw(batch);
         }
 
+        private void DrawPortalMarker(UISpriteBatch batch, Vector2 center, Color color)
+        {
+            var pixel = FSO.Common.Utils.TextureGenerator.GetPxWhite(GameFacade.GraphicsDevice);
+            var size = new Vector2(PortalMarkerRadius);
+            DrawLocalTexture(batch, pixel, null, center - size, size * 2, Color.Black * 0.85f);
+            DrawLocalTexture(batch, pixel, null, center - size + Vector2.One, (size - Vector2.One) * 2, color);
+        }
+
         private WorldZoom LastZoom;
+        private VMAvatar LastPlumbobAvatar;
         public override void Update(UpdateState state)
         {
             base.Update(state);
@@ -886,22 +944,25 @@ namespace Simitone.Client.UI.Panels
             {
                 if (avatar.Avatar == null) continue;
                 var isActive = avatar == ActiveEntity;
-                var marker = isActive ? plumb : null;
+                var marker = isActive
+                    ? MoodPlumbob.Get(Content.Get(), plumb, avatar.GetMotiveData(FSO.SimAntics.Model.VMMotive.Mood))
+                    : null;
                 if (!isActive && avatar.GetValue(FSO.SimAntics.Model.VMStackObjectVariable.Category) == 87)
                     marker = ClassicStarBob.Get(Content.Get());
 
                 if (avatar.Avatar.HeadObject != marker)
                 {
                     avatar.Avatar.HeadObject = marker;
-                    if (isActive) avatar.Avatar.HeadObjectSpeedyVel = 0.2f;
                 }
                 avatar.Avatar.HeadObjectRotation += 3f / FSOEnvironment.RefreshRate;
                 if (isActive)
                 {
+                    if (LastPlumbobAvatar != avatar) avatar.Avatar.HeadObjectSpeedyVel = 0.2f;
                     avatar.Avatar.HeadObjectRotation += avatar.Avatar.HeadObjectSpeedyVel;
                     avatar.Avatar.HeadObjectSpeedyVel *= 0.98f;
                 }
             }
+            LastPlumbobAvatar = ActiveEntity as VMAvatar;
             /*
             if (ActiveEntity != null && BlockingDialog != null)
             {

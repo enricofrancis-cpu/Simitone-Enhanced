@@ -181,7 +181,7 @@ namespace Simitone.Client.UI.Screens
         private bool MissingAppearanceShown;
         private bool HasAppearanceChoices => SkinCatalog.HasCompatibleSelection(ActiveHeads, ActiveBodies);
 
-        private static bool CanRenderAppearance(string name)
+        internal static bool CanRenderAppearance(string name)
         {
             var content = Content.Get();
             var appearance = content.AvatarAppearances.Get(name + ".apr");

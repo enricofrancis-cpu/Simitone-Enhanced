@@ -128,7 +128,7 @@ namespace Simitone.Client.UI.Panels
             LotTitle = new UILabel();
             LotTitle.Position = new Vector2(30, 122 + extra - 64);
             InitLabel(LotTitle);
-            LotTitle.CaptionStyle.Size = 37;
+            LotTitle.CaptionStyle.Size = 29;
             LotTitle.Caption = name;
 
             var family = neigh.GetFamilyForHouse((short)houseID);

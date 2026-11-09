@@ -85,10 +85,10 @@ namespace Simitone.Client.UI.Panels.Desktop
             var gd = GameFacade.GraphicsDevice;
             var sDir = new Vector3(0, 2, 0.5f);
 
-            Background = new UIImage(ui.Get("d_live_bg.png").Get(gd));
+            Background = new UIImage(UIStyle.GetBlueChrome("d_live_bg.png", gd));
             Add(Background);
 
-            FriendIcon = new UIImage(ui.Get("d_live_friend.png").Get(gd)) { Position = new Vector2(156, 186) };
+            FriendIcon = new UIImage(UIStyle.GetBlueChrome("d_live_friend.png", gd)) { Position = new Vector2(156, 186) };
             Add(FriendIcon);
 
             // Eyedropper button - visible in Buy and Build modes
@@ -300,7 +300,7 @@ namespace Simitone.Client.UI.Panels.Desktop
                 FloorUpButton.Disabled = LastFloor == 5;
             }
 
-            var speed = RemapSpeed[Math.Max(0, vm.SpeedMultiplier)];
+            var speed = vm.SpeedMultiplier == TS1GameScreen.SleepingSpeed ? 3 : RemapSpeed[Math.Max(0, vm.SpeedMultiplier)];
             if (speed != LastSpeed)
             {
                 /*

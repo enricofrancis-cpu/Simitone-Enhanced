@@ -5,7 +5,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--dotnet',default='dotnet'
 root=Path(__file__).resolve().parents[1]
 source=(root/'Client/Simitone/Simitone.Client/UI/Screens/TS1CASScreen.cs').read_text()
 method=source[source.index('        private void SetHead('):source.index('        private void PopulateReal(')].replace('private void SetHead','public void SetHead',1)
-validation=source[source.index('        private static bool CanRenderAppearance('):source.index('        private void PopulateSimType(')].replace('private static bool','public static bool',1)
+validation=source[source.index('        internal static bool CanRenderAppearance('):source.index('        private void PopulateSimType(')].replace('internal static bool','public static bool',1)
 with tempfile.TemporaryDirectory(prefix='simitone-cas-empty-') as temporary:
  fixture=Path(temporary)
  (fixture/'CasProbe.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net9.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup></Project>')

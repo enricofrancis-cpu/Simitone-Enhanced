@@ -23,6 +23,7 @@ namespace Simitone.Client.UI.Panels
         private Dictionary<string, VMCheatContext.VMCheatType> cheatDefinitions = new Dictionary<string, VMCheatContext.VMCheatType>()
         {
             { "moveobjects", VMCheatContext.VMCheatType.MoveObjects},
+            { "move_objects", VMCheatContext.VMCheatType.MoveObjects},
             { "motherlode", VMCheatContext.VMCheatType.Budget },
             { "klapaucius", VMCheatContext.VMCheatType.Budget },
             { "rosebud", VMCheatContext.VMCheatType.Budget },

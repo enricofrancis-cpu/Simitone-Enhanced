@@ -74,14 +74,14 @@ namespace Simitone.Client.UI.Controls
             FrontStripe = new UIDiagonalStripe(new Point(), UIDiagonalStripeSide.RIGHT, UIStyle.Current.DialogBg);
             Add(FrontStripe);
 
-            TitleBg = new UIImage(Content.Get().CustomUI.Get("dialog_title_grad.png").Get(GameFacade.GraphicsDevice));
+            TitleBg = new UIImage(UIStyle.GetBlueChrome("dialog_title_grad.png", GameFacade.GraphicsDevice));
             TitleBg.SetSize(Width, 70);
             Add(TitleBg);
 
             TitleLabel = new UILabel();
             TitleLabel.X = 50;
             TitleLabel.CaptionStyle = TitleLabel.CaptionStyle.Clone();
-            TitleLabel.CaptionStyle.Size = 37;
+            TitleLabel.CaptionStyle.Size = 29;
             TitleLabel.CaptionStyle.Color = UIStyle.Current.DialogTitle;
             TitleLabel.Alignment = TextAlignment.Top | TextAlignment.Left;
             Add(TitleLabel);

@@ -40,7 +40,7 @@ namespace Simitone.Client.UI.Panels.CAS
             var gd = GameFacade.GraphicsDevice;
 
             PxWhite = TextureGenerator.GetPxWhite(gd);
-            Grad = ui.Get("dialog_title_grad.png").Get(gd);
+            Grad = UIStyle.GetBlueChrome("dialog_title_grad.png", gd);
             Background = new UIImage(ui.Get("circle10px.png").Get(gd)).With9Slice(19, 19, 19, 19);
             //set the width based on number of family members
             //30 margin on family thumbs
