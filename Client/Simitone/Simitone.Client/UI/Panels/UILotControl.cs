@@ -20,6 +20,7 @@ using FSO.HIT;
 
 using FSO.LotView;
 using FSO.SimAntics;
+using FSO.SimAntics.Model;
 using FSO.SimAntics.Entities;
 using FSO.LotView.Components;
 using Microsoft.Xna.Framework.Input;
