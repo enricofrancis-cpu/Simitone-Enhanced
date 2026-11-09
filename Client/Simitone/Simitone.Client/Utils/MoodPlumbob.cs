@@ -14,7 +14,7 @@ namespace Simitone.Client.Utils
 
         public static DGRP3DMesh Get(Content content, DGRP3DMesh original, int mood)
         {
-            if (original == null) return null;
+            if (original == null || original.Geoms.Count == 0) return original;
             var step = (int)Math.Round(MathHelper.Clamp(mood, -100, 100) * (MoodSteps / 100f));
             if (step == MoodSteps) return original;
 
