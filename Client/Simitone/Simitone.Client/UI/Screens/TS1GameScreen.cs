@@ -314,7 +314,7 @@ namespace Simitone.Client.UI.Screens
         private void UpdateSleepingSpeed()
         {
             if (Downtown || vm?.Ready != true || vm.TS1State?.CurrentFamily == null) return;
-            var present = vm.Context.ObjectQueries.Avatars.Where(sim =>
+            var present = vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().Where(sim =>
                 !sim.Dead && !sim.IsPet && sim.Position != LotTilePos.OUT_OF_WORLD);
             var allAsleep = present.Any() && present.All(sim =>
                 sim.GetMotiveData(FSO.SimAntics.Model.VMMotive.SleepState) != 0);
