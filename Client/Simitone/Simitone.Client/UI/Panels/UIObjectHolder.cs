@@ -487,7 +487,12 @@ namespace Simitone.Client.UI.Panels
                         Holding.RealEnt = objGroup.BaseObject;
                         if (UseNet) RecursiveHide(Holding.RealEnt);
                         Holding.CanDelete = canDelete;
-                        Holding.MoveTarget = newHover;
+                        Holding.MoveTarget = portal != 0 ? objGroup.BaseObject.ObjectID : newHover;
+                        if (portal != 0)
+                        {
+                            var guid = vm.GetObjectById(portal).Object.OBJ.GUID;
+                            Holding.PortalMarkerColor = guid == 0x81E6BEF9 ? Color.DeepSkyBlue : Color.Gold;
+                        }
                         var estBase = state.MouseState.Position; //FSOEnvironment.SoftwareKeyboard ? new Point(UIScreen.Current.ScreenWidth / 2, UIScreen.Current.ScreenHeight / 2) : state.MouseState.Position;
                         Holding.TilePosOffset = new Vector2(objBasePos.x / 16f, objBasePos.y / 16f) - World.EstTileAtPosWithScroll(new Vector2(estBase.X, estBase.Y) / FSOEnvironment.DPIScaleFactor);
                         if (OnPickup != null) OnPickup(Holding, state);
@@ -600,6 +605,7 @@ namespace Simitone.Client.UI.Panels
         public int Price;
         public uint InventoryPID = 0;
         public bool CanDelete;
+        public Color? PortalMarkerColor;
         public VMEntity RealEnt;
 
         public bool IsBought

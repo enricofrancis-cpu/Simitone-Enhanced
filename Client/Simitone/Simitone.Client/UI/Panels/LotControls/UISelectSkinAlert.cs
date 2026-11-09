@@ -1,4 +1,4 @@
-using FSO.Client;
+﻿using FSO.Client;
 using FSO.Client.UI.Framework;
 using FSO.Common;
 using FSO.Common.Rendering.Framework;
@@ -9,6 +9,8 @@ using FSO.Content;
 using FSO.Content.TS1;
 using FSO.LotView.Model;
 using FSO.SimAntics;
+using FSO.SimAntics.Utils;
+using Simitone.Client.UI.Screens;
 using FSO.SimAntics.Engine.TSOTransaction;
 using FSO.SimAntics.NetPlay;
 using FSO.SimAntics.NetPlay.Drivers;
@@ -65,7 +67,7 @@ namespace Simitone.Client.UI.Panels.LotControls
 
         public uint BaseGUID = 0x7FD96B54; //all of our templates should be of this kind.
         public string CurrentCode;
-        public string CurrentSkin; //
+        private readonly List<short> OutfitIndices = new List<short>();
         
         public VMAvatar[] BodyAvatars;
         public List<string> ActiveBodies;
@@ -84,60 +86,49 @@ namespace Simitone.Client.UI.Panels.LotControls
         public bool Pet;
 
         public _3DTargetScene Scene;
-        public string CollectionType = "b";
 
         public event Action<short> OnResult;
         public UIBigButton OKButton;
         public UIBigButton CancelButton;
 
-        public short ResultInd
-        {
-            get
-            {
-                var i = (int)DirectionUtils.PosMod(Math.Round(BodyPosition + 8), ActiveBodies.Count);
-                return (short)i;
-            }
-        }
-
-        public string ResultBody
-        {
-            get
-            {
-                var i = (int)DirectionUtils.PosMod(Math.Round(BodyPosition + 8), ActiveBodies.Count);
-                return ActiveBodies[i] + ",BODY=" + ActiveBodyTex[i];
-            }
-        }
+        private short ResultInd => OutfitIndices.Count == 0 ? (short)-1
+            : OutfitIndices[(int)DirectionUtils.PosMod(Math.Round(BodyPosition + 8), OutfitIndices.Count)];
 
         public UISelectSkinPanel(VMAvatar target, string type, VM vm) {
             this.vm = vm;
-            if (target != null)
+            Pet = target == null;
+            if (Pet)
+            {
+                BaseGUID = type == "cat" ? 0x7BEA0977u : 0x4A70DF92u;
+            }
+            else
             {
                 BaseGUID = target.Object.OBJ.GUID;
-                CollectionType = type;
                 var bodyStrings = target.Object.Resource.Get<FSO.Files.Formats.IFF.Chunks.STR>(target.Object.OBJ.BodyStringID);
-                type = bodyStrings.GetString(1).Substring(4);
-                type = type.Substring(0, type.IndexOf('_'));
-
-                CurrentSkin = bodyStrings.GetString(14);
-            } else
-            {
-                Pet = true;
-                if (type == "cat") BaseGUID = 0x7BEA0977;
-                else if (type == "dog") BaseGUID = 0x4A70DF92;
+                var body = bodyStrings?.GetString(1);
+                var separator = body?.IndexOf('_', Math.Min(4, body.Length)) ?? -1;
+                CurrentCode = separator > 4 ? body.Substring(4, separator - 4).ToLowerInvariant() : null;
             }
+            var outfitType = Pet ? (type == "cat" ? -2 : -1)
+                : Array.IndexOf(VMTS1PurchasableOutfitHelper.OutfitTypes, type);
+            PopulateOutfits(target, (short)outfitType);
             Camera = new BasicCamera(GameFacade.GraphicsDevice, new Vector3(5, 1, 0), new Vector3(0, 0, 0), new Vector3(0, 1, 0));
             Camera.NearPlane = 0.001f;
             Scene = new _3DTargetScene(GameFacade.GraphicsDevice, Camera, new Point(1030, 500), (GlobalSettings.Default.AntiAlias > 0)?8:0);
             Scene.Initialize(GameFacade.Scenes);
 
-            InitializeLot();
-            PopulateSimType(type);
+            if (OutfitIndices.Count > 0)
+            {
+                InitializeLot();
+                PopulateReal();
+            }
 
             OKButton = new UIBigButton(true);
             OKButton.Caption = GameFacade.Strings.GetString("142", "0");
             OKButton.Position = new Microsoft.Xna.Framework.Vector2((515 + 300)-137, 370);
             OKButton.OnButtonClick += (btn) => { OnResult?.Invoke(ResultInd); };
             OKButton.Width = 275;
+            OKButton.Disabled = OutfitIndices.Count == 0;
             Add(OKButton);
 
             CancelButton = new UIBigButton(true);
@@ -167,6 +158,7 @@ namespace Simitone.Client.UI.Panels.LotControls
         public override void Update(UpdateState state)
         {
             base.Update(state);
+            if (OutfitIndices.Count == 0) return;
             UpdateCarousel(state);
 
 
@@ -190,52 +182,25 @@ namespace Simitone.Client.UI.Panels.LotControls
             }
         }
 
-        private void PopulateSimType(string simtype) // cat / dog / (ma/fa/mc/fc/uc) + (fit/fat/skn/chd)
+        private void PopulateOutfits(VMAvatar target, short outfitType)
         {
-            CurrentCode = simtype;
-            var col = Content.Get().BCFGlobal.CollectionsByName[CollectionType];
-            var bodies = col.ClothesByAvatarType[simtype];
+            ActiveBodies = new List<string>();
+            ActiveBodyTex = new List<string>();
+            ActiveHandgroupTex = new List<string>();
+            if (!Pet && (outfitType < 0 || string.IsNullOrEmpty(CurrentCode) || CurrentCode.Length < 2)) return;
 
-            var tex = (TS1AvatarTextureProvider)Content.Get().AvatarTextures;
-            var texnames = tex.GetAllNames();
-            ActiveBodies = bodies;
-            
-            ActiveBodyTex = bodies.Select(x => RemoveExt(texnames.FirstOrDefault(y => y.StartsWith(ExtractID(x, CurrentSkin))))).ToList();
-            ActiveHandgroupTex = bodies.Select(x => (RemoveExt(texnames.FirstOrDefault(y => y == "huao" + FindHG(x))) ?? "huao" + CurrentSkin).Substring(4)).ToList();
-
-            ActiveBodies = SkinCatalog.FilterAvailable(bodies, ActiveBodyTex, ActiveHandgroupTex);
-
-            BodyPositionLast = 0;
-            PopulateReal();
-        }
-
-        private string FindHG(string item)
-        {
-            var ind = item.IndexOf('_');
-            if (ind != -1) item = item.Substring(ind);
-            return item;
-        }
-
-        private string RemoveExt(string item)
-        {
-            if (item == null) return null;
-            var ind = item.LastIndexOf('.');
-            if (ind != -1) return item.Substring(0, ind);
-            return item;
-        }
-
-        private string ExtractID(string item, string skncol)
-        {
-            var ind = item.IndexOf('_');
-            if (ind != -1) item = item.Substring(0, ind);
-            return item + skncol;
-        }
-
-        private string InsertSkinColor(string name, string skncol)
-        {
-            var ind = name.IndexOf('_');
-            if (ind != -1) name = name.Insert(ind, skncol);
-            return name;
+            // The BHAV consumes an index into the VM catalogue. Keep that index
+            // when skipping an outfit which cannot be previewed.
+            var outfits = VMTS1PurchasableOutfitHelper.GetValidOutfits(target, outfitType);
+            for (int i = 0; i < outfits.Length && i <= short.MaxValue; i++)
+            {
+                var parts = outfits[i].Item1.Split(new[] { ",BODY=" }, 2, StringSplitOptions.None);
+                if (parts.Length != 2 || !TS1CASScreen.CanRenderAppearance(parts[0])) continue;
+                OutfitIndices.Add((short)i);
+                ActiveBodies.Add(parts[0]);
+                ActiveBodyTex.Add(parts[1]);
+                ActiveHandgroupTex.Add(outfits[i].Item2);
+            }
         }
 
         private void UpdateCarousel(UpdateState state)
@@ -368,6 +333,7 @@ namespace Simitone.Client.UI.Panels.LotControls
         {
             if (vm == null) return;
 
+            if (BodyAvatars == null) return;
             foreach (var body in BodyAvatars)
             {
                 body.Delete(true, vm.Context);

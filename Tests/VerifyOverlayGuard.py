@@ -9,7 +9,7 @@ root=Path(__file__).resolve().parents[1]
 groups={
  'FSO.Files': ('tso.files',['Utils/BCFReadProxy.cs']),
  'FSO.Content': ('tso.content',['Codecs/CMXCodex.cs','WorldRoofProvider.cs','TS1/TS1JobProvider.cs','TS1/TS1NeighbourProvider.cs','TS1/TS1BCFProvider.cs','Framework/TS1Provider.cs']),
- 'FSO.SimAntics': ('tso.simantics',['Marshals/VMResourceIDMarshal.cs','Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs','Primitives/VMGenericTS1Call.cs','Engine/VMThread.cs','Engine/VMSuitProvider.cs','Entities/VMAvatar.cs','Primitives/VMShowString.cs','NetPlay/Model/Commands/VMNetChangeControlCmd.cs','NetPlay/Model/Commands/VMNetSimJoinCmd.cs','Engine/VMMemory.cs']),
+ 'FSO.SimAntics': ('tso.simantics',['VMContext.cs','NetPlay/Model/Commands/VMNetCheatCmd.cs','Marshals/VMResourceIDMarshal.cs','Utils/VMTS1PurchasableOutfitHelper.cs','Primitives/VMTS1InventoryOperations.cs','Primitives/VMGenericTS1Call.cs','Engine/VMThread.cs','Engine/VMSuitProvider.cs','Entities/VMAvatar.cs','Primitives/VMShowString.cs','NetPlay/Model/Commands/VMNetChangeControlCmd.cs','NetPlay/Model/Commands/VMNetSimJoinCmd.cs','Engine/VMMemory.cs']),
  'FSO.LotView': ('tso.world',['Components/RoofComponent.cs','Components/ObjectComponent.cs','LMap/LMapBatch.cs']),
  'FSO.Vitaboy': ('tso.vitaboy.model',['BCF.cs','CFP.cs'])
 }

@@ -1109,7 +1109,8 @@ namespace Simitone.Client.UI.Screens
 
         public void ReturnToNeighbourhood()
         {
-            if (CloseAlert == null)
+            var lot = vm;
+            if (lot != null && CloseAlert == null)
             {
                 CloseAlert = new UIMobileAlert(new FSO.Client.UI.Controls.UIAlertOptions
                 {
@@ -1117,13 +1118,21 @@ namespace Simitone.Client.UI.Screens
                     Message = GameFacade.Strings.GetString("153", "4"), //Do you want to save the game?
                     Buttons =
                     UIAlertButton.YesNoCancel(
-                        (b) => { Save(); ExitLot(); CloseAlert.Close(); CloseAlert = null; },
-                        (b) => { ExitLot(); CloseAlert.Close(); CloseAlert = null; },
+                        (b) => CompleteReturnToNeighbourhood(lot, true),
+                        (b) => CompleteReturnToNeighbourhood(lot, false),
                         (b) => { CloseAlert.Close(); CloseAlert = null; }
                         )
                 });
                 GlobalShowDialog(CloseAlert, true);
             }
+        }
+
+        private void CompleteReturnToNeighbourhood(VM lot, bool save)
+        {
+            if (save && vm == lot) Save();
+            CloseAlert.Close();
+            CloseAlert = null;
+            if (vm == lot) ExitLot();
         }
 
         public void Save()

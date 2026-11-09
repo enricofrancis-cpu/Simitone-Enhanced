@@ -789,25 +789,30 @@ namespace Simitone.Client.UI.Panels
         private IEnumerable<(VMEntity Entity, Vector2 Center, Color Color)> GetPortalMarkers()
         {
             if (!ShowPortalMarkers || !vm.Ready) yield break;
-            var screen = GameFacade.Screens.CurrentUIScreen;
-            var mid = new Vector2(screen.ScreenWidth, screen.ScreenHeight) * 0.5f;
+            var held = ObjectHolder.Holding;
             foreach (var entity in vm.Entities)
             {
                 var guid = entity.Object.OBJ.GUID;
                 var car = guid == 0x865A6812 || guid == 0xD564C66B;
                 if ((!car && guid != 0x81E6BEF9) || entity.Position == LotTilePos.OUT_OF_WORLD ||
-                    entity.Position.Level != World.State.Level || entity.WorldUI == null ||
-                    ObjectHolder.Holding?.RealEnt == entity) continue;
-                var projected = entity.WorldUI.GetScreenPos(World.State);
-                var center = (mid + (projected - mid) * World.BackbufferScale) / FSOEnvironment.DPIScaleFactor;
-                yield return (entity, center, car ? Color.Gold : Color.DeepSkyBlue);
+                    entity.Position.Level != World.State.Level || entity.WorldUI == null || entity.GhostImage ||
+                    held?.RealEnt?.MultitileGroup == entity.MultitileGroup) continue;
+                yield return (entity, PortalMarkerCenter(entity), car ? Color.Gold : Color.DeepSkyBlue);
             }
+        }
+
+        private Vector2 PortalMarkerCenter(VMEntity entity)
+        {
+            var screen = GameFacade.Screens.CurrentUIScreen;
+            var mid = new Vector2(screen.ScreenWidth, screen.ScreenHeight) * 0.5f;
+            var projected = entity.WorldUI.GetScreenPos(World.State);
+            return (mid + (projected - mid) * World.BackbufferScale) / FSOEnvironment.DPIScaleFactor;
         }
 
         internal short PickPortalMarker(Point mouse)
         {
             if (!vm.Context.Cheats.MoveObjects) return 0;
-            var pointer = mouse.ToVector2() / FSOEnvironment.DPIScaleFactor;
+            var pointer = GlobalPoint(mouse.ToVector2());
             foreach (var marker in GetPortalMarkers())
             {
                 var delta = marker.Center - pointer;
@@ -820,17 +825,28 @@ namespace Simitone.Client.UI.Panels
         public override void Draw(UISpriteBatch batch)
         {
             foreach (var marker in GetPortalMarkers())
+                DrawPortalMarker(batch, marker.Center, marker.Color);
+
+            var held = ObjectHolder.Holding;
+            if (ShowPortalMarkers && held?.PortalMarkerColor is Color portalColor)
             {
-                var pixel = FSO.Common.Utils.TextureGenerator.GetPxWhite(GameFacade.GraphicsDevice);
-                var size = new Vector2(PortalMarkerRadius);
-                DrawLocalTexture(batch, pixel, null, marker.Center - size, size * 2, Color.Black * 0.85f);
-                DrawLocalTexture(batch, pixel, null, marker.Center - size + Vector2.One, (size - Vector2.One) * 2, marker.Color);
+                var entity = held.Group.BaseObject;
+                DrawPortalMarker(batch, PortalMarkerCenter(entity),
+                    held.CanPlace == VMPlacementError.Success ? portalColor : Color.OrangeRed);
             }
             if (RMBScroll)
             {
                 DrawLocalTexture(batch, RMBCursor, new Vector2(RMBScrollX - RMBCursor.Width / 2, RMBScrollY - RMBCursor.Height / 2));
             }
             base.Draw(batch);
+        }
+
+        private void DrawPortalMarker(UISpriteBatch batch, Vector2 center, Color color)
+        {
+            var pixel = FSO.Common.Utils.TextureGenerator.GetPxWhite(GameFacade.GraphicsDevice);
+            var size = new Vector2(PortalMarkerRadius);
+            DrawLocalTexture(batch, pixel, null, center - size, size * 2, Color.Black * 0.85f);
+            DrawLocalTexture(batch, pixel, null, center - size + Vector2.One, (size - Vector2.One) * 2, color);
         }
 
         private WorldZoom LastZoom;

@@ -40,7 +40,7 @@ namespace Simitone.Client.Utils
                         for (int i = 0; i < pixels.Length; i++)
                         {
                             var color = pixels[i];
-                            var neutral = new Color(color.G, color.G, color.G, color.A);
+                            var neutral = new Color(color.G, color.G * 3 / 4, color.G / 8, color.A);
                             var red = new Color((int)color.G, color.G / 8, color.G / 8, color.A);
                             pixels[i] = step < 0
                                 ? Color.Lerp(neutral, red, -step / (float)MoodSteps)
