@@ -421,7 +421,11 @@ namespace Simitone.Client.UI.Panels
             else if (MouseClicked)
             {
                 //not holding an object, but one can be selected
-                var newHover = World.GetObjectIDAtScreenPos(state.MouseState.X, state.MouseState.Y, GameFacade.GraphicsDevice);
+                var portal = MouseClicked && !EyedropperMode
+                    ? ParentControl.PickPortalMarker(state.MouseState.Position)
+                    : (short)0;
+                var newHover = portal != 0 ? portal
+                    : World.GetObjectIDAtScreenPos(state.MouseState.X, state.MouseState.Y, GameFacade.GraphicsDevice);
 
                 // Eyedropper mode - pick object GUID or architecture pattern
                 // Priority: Objects (doors/windows in walls) → Walls → Floors
@@ -476,7 +480,8 @@ namespace Simitone.Client.UI.Panels
                     {
                         var ghostGroup = (UseNet) ? vm.Context.GhostCopyGroup(objGroup) : objGroup ;
                         ghostGroup.ChangePosition(objGroup.BaseObject.Position, objGroup.BaseObject.Direction, vm.Context, VMPlaceRequestFlags.Default);
-                        var canDelete = GameFacade.EnableMod || (objGroup.BaseObject.IsUserMovable(vm.Context, true)) == VMPlacementError.Success;
+                        var canDelete = portal == 0 &&
+                            (GameFacade.EnableMod || objGroup.BaseObject.IsUserMovable(vm.Context, true) == VMPlacementError.Success);
                         SetSelected(ghostGroup);
 
                         Holding.RealEnt = objGroup.BaseObject;
