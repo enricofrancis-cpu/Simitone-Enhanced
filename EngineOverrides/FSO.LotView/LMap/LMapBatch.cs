@@ -524,7 +524,9 @@ namespace FSO.LotView.LMap
                 DrawRect.Offset(ScissorBase);
                 GD.ScissorRectangle = DrawRect;
                 LightEffect.LightColor = Color.White.ToVector4() * outFactor.W;
-                LightEffect.ShadowPowers = new Vector2(0.75f, 0.72f) * light.ShadowMultiplier;
+                // The green channel is the floor shadow under objects. Keep the wall
+                // shadow strength and the existing sun/weather fade.
+                LightEffect.ShadowPowers = new Vector2(0.75f, 0.92f) * light.ShadowMultiplier;
                 LightEffect.LightHeight = 1f / (float)Blueprint.Width;
 
                 LightEffect.LightPosition = light.LightPos / (size * 16f); //in position space (0,1)

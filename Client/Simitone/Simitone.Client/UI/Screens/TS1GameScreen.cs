@@ -696,7 +696,13 @@ namespace Simitone.Client.UI.Screens
             CleanupLastWorld();
             SpeedBeforeSleep = 0;
             SleepFastForwardDeclined = false;
-            World = new FSO.LotView.World(GameFacade.GraphicsDevice);
+            World = new LotBackdropWorld(GameFacade.GraphicsDevice, () =>
+            {
+                var terrain = vm?.Context?.Architecture?.Terrain;
+                var type = TerrainSnowApplied ? FSO.Content.Model.TerrainType.SNOW :
+                    terrain?.LightType ?? FSO.Content.Model.TerrainType.GRASS;
+                return (int)type;
+            });
 
             World.Opacity = 1;
             GameFacade.Scenes.Add(World);

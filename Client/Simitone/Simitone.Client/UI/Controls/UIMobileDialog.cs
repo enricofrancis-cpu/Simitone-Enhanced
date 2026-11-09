@@ -74,7 +74,7 @@ namespace Simitone.Client.UI.Controls
             FrontStripe = new UIDiagonalStripe(new Point(), UIDiagonalStripeSide.RIGHT, UIStyle.Current.DialogBg);
             Add(FrontStripe);
 
-            TitleBg = new UIImage(Content.Get().CustomUI.Get("dialog_title_grad.png").Get(GameFacade.GraphicsDevice));
+            TitleBg = new UIImage(UIStyle.GetBlueChrome("dialog_title_grad.png", GameFacade.GraphicsDevice));
             TitleBg.SetSize(Width, 70);
             Add(TitleBg);
 
