@@ -28,6 +28,28 @@ static void MakeNeighborhood(string path) {
         File.WriteAllText(Path.Combine(path,name),"synthetic "+name);
     File.WriteAllText(Path.Combine(path,"Characters","keep.txt"),"source must remain intact");
 }
+static BCF DecodeCmx(string text)
+{
+    using var input = new MemoryStream(System.Text.Encoding.ASCII.GetBytes(text));
+    return (BCF)new FSO.Content.Codecs.CMXCodec().GenDecode(input);
+}
+const string appearanceOnly = "0\n1\nSynthetic\n0\n0\n1\nROOT\nmesh\n0\n0";
+Check(DecodeCmx("Version 300\n" + appearanceOnly + "\n0\u001a").Appearances[0].Name == "Synthetic",
+    "uppercase CMX header or DOS EOF marker broke the appearance");
+Check(DecodeCmx("version 300\n" + appearanceOnly).Animations.Length == 0,
+    "a complete appearance ending before the optional animation count was rejected");
+Check(DecodeCmx("Custom mesh by Author\n" + appearanceOnly).Appearances[0].Bindings.Length == 1,
+    "headerless legacy CMX appearance was rejected");
+Reject(() => DecodeCmx("version 300\n" + appearanceOnly[..^2]),
+    "CMX with an incomplete required binding was accepted");
+using (var binaryCmx = new MemoryStream())
+{
+    new BCF(Array.Empty<Skeleton>(), Array.Empty<Appearance>(), Array.Empty<Animation>()).Write(binaryCmx, false);
+    using var binaryInput = new MemoryStream(binaryCmx.ToArray());
+    var bcf = (BCF)new FSO.Content.Codecs.CMXCodec().GenDecode(binaryInput);
+    Check(bcf.Appearances.Length == 0, "binary BCF with a CMX extension was rejected");
+}
+
 var root=Path.Combine(Path.GetTempPath(),"simitone-engine-safety-"+Guid.NewGuid().ToString("N"));
 try {
     Check(typeof(CharacterFileStore).Assembly==typeof(TS1NeighborhoodProvider).Assembly,"safety helpers were not built into the real engine");

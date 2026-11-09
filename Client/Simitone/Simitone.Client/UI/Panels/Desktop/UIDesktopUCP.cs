@@ -300,7 +300,7 @@ namespace Simitone.Client.UI.Panels.Desktop
                 FloorUpButton.Disabled = LastFloor == 5;
             }
 
-            var speed = RemapSpeed[Math.Max(0, vm.SpeedMultiplier)];
+            var speed = vm.SpeedMultiplier == TS1GameScreen.SleepingSpeed ? 3 : RemapSpeed[Math.Max(0, vm.SpeedMultiplier)];
             if (speed != LastSpeed)
             {
                 /*

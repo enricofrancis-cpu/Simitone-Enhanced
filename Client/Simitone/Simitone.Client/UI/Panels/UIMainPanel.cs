@@ -238,6 +238,7 @@ namespace Simitone.Client.UI.Panels
 
             var live = (mode == UIMainPanelMode.LIVE);
             Game.LotControl.LiveMode = live;
+            Game.LotControl.ShowPortalMarkers = mode == UIMainPanelMode.BUILD;
             HideButton.Visible = live;
 
             ModeChanged?.Invoke(mode);

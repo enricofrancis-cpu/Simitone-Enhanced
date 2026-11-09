@@ -1,8 +1,9 @@
 <Project>
   <!-- Reviewed compile replacements; original FreeSO checkout and pin remain unchanged. -->
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.Content'">
-    <Compile Remove="TS1/TS1NeighbourProvider.cs;TS1/TS1BCFProvider.cs;Framework/TS1Provider.cs;TS1/TS1JobProvider.cs;WorldRoofProvider.cs" />
+    <Compile Remove="TS1/TS1NeighbourProvider.cs;TS1/TS1BCFProvider.cs;Framework/TS1Provider.cs;TS1/TS1JobProvider.cs;WorldRoofProvider.cs;Codecs/CMXCodex.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)EngineOverrides/FSO.Content/**/*.cs" />
+    <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Codecs/CMXCodex.cs"><ExpectedHash>E48A7F68C2AAA06AA94115C6A4B150EE098F1E6638AF25EE247DBAC3FF09772F</ExpectedHash><ExpectedHashCRLF>27563793491A1B8879E80FC6786D9EACFA6B7AE4EC69A3AED6E99037FFF9696C</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/WorldRoofProvider.cs"><ExpectedHash>F88620E8676994E4A93DE80EA0305EEAA6ED9A72281AF7704167DC5E85F001C1</ExpectedHash><ExpectedHashCRLF>24D19056FE39CD7438B5603C5A5C03C65266CA56AA7AA26C9B201C537678A707</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/TS1/TS1JobProvider.cs"><ExpectedHash>00AE46F86E232206827F56665D40834B8F454663AA64A6522EFFBB0685204B4A</ExpectedHash><ExpectedHashCRLF>879AA1B2B55CFBB94866DE7986E94335B66818329B642E9DC0A2E095B605A924</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/TS1/TS1NeighbourProvider.cs"><ExpectedHash>4D363EA96D2BAAD9B3674017A376E5F41E6B99BE0BFB34AE51D9E1BD4A2BF379</ExpectedHash><ExpectedHashCRLF>5626EBC38D1ED370507E5D4460483E7DF5E97F16F9C3DB1D826B613F63C1904E</ExpectedHashCRLF></_EnhancedBaseSource>
@@ -32,9 +33,15 @@
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/LMap/LMapBatch.cs"><ExpectedHash>FFC9139E1B43E454839A9E6A3C6916ADB235086F64CC22326821016DB27D72A2</ExpectedHash><ExpectedHashCRLF>454F20DC5380BCED98F4ED945921CEBF50D8C23457D3016CE2C9E63834D47772</ExpectedHashCRLF></_EnhancedBaseSource>
   </ItemGroup>
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.Vitaboy'">
-    <Compile Remove="CFP.cs" />
+    <Compile Remove="CFP.cs;BCF.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)EngineOverrides/FSO.Vitaboy/**/*.cs" />
+    <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/BCF.cs"><ExpectedHash>E8753A20276FBB47BC1C58E128226E68CB6D01B6A69A425891FDEF3AAA8D5D47</ExpectedHash><ExpectedHashCRLF>A09CD61C277BB7729D666741600B6FBC2DE81D96034F1E79CD76B656718DED7B</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/CFP.cs"><ExpectedHash>8E0E73EB1EE3A3BC30FA27C5DFF68AF211EC639FF8CB826A93AE50830EB17C79</ExpectedHash><ExpectedHashCRLF>B018BE04F909D761198372802A72BDDA4C1DFC15F4673D55AA91D0BB16680FDE</ExpectedHashCRLF></_EnhancedBaseSource>
+  </ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.Files'">
+    <Compile Remove="Utils/BCFReadProxy.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)EngineOverrides/FSO.Files/**/*.cs" />
+    <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Utils/BCFReadProxy.cs"><ExpectedHash>2FC65DFC696E95A8E00E15C388E205AEE2F62BE05A09B81813D03F00F6ACE404</ExpectedHash><ExpectedHashCRLF>3ACBF35E5C30F2918446B453167DF6124F6DA9F2C4B550B48A27F46880314DF3</ExpectedHashCRLF></_EnhancedBaseSource>
   </ItemGroup>
   <Target Name="VerifyEnhancedProviderBase" BeforeTargets="CoreCompile" Condition="'@(_EnhancedBaseSource)' != ''">
     <GetFileHash Files="@(_EnhancedBaseSource)" Algorithm="SHA256">

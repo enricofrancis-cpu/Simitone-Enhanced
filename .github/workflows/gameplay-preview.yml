@@ -1,8 +1,8 @@
-name: Playtest fixes preview checks
+name: Mood and compatibility preview checks
 
 on:
   pull_request:
-    branches: [enhanced-development, preview/travel-recovery]
+    branches: [enhanced-development, preview/travel-recovery, preview/november-playtest-fixes]
   workflow_dispatch:
 
 env:
@@ -62,12 +62,12 @@ jobs:
           -o publish/gameplay-win
       - name: Prepare isolated test bundle
         shell: pwsh
-        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Playtest-Fixes-Preview-Windows
+        run: ./packaging/superstar/Prepare-Bundle.ps1 -OutputDirectory release/Mood-and-Compatibility-Preview-Windows
       - name: Upload playable Windows preview
         uses: actions/upload-artifact@v4
         with:
-          name: Simitone-Enhanced-Playtest-Fixes-Preview-Windows-x64
-          path: release/Playtest-Fixes-Preview-Windows/
+          name: Simitone-Enhanced-Mood-and-Compatibility-Preview-Windows-x64
+          path: release/Mood-and-Compatibility-Preview-Windows/
           if-no-files-found: error
           retention-days: 30
 

@@ -307,6 +307,41 @@ namespace Simitone.Client.UI.Screens
         private int SpeedBeforeAutoFastForward;
         private bool AutoFastForwardDeclined; // the user changed speed while everyone was away
 
+        internal const int SleepingSpeed = 5;
+        private int SpeedBeforeSleep;
+        private bool SleepFastForwardDeclined;
+
+        private void UpdateSleepingSpeed()
+        {
+            if (Downtown || vm?.Ready != true || vm.TS1State?.CurrentFamily == null) return;
+            var present = vm.Context.ObjectQueries.Avatars.OfType<VMAvatar>().Where(sim =>
+                !sim.Dead && !sim.IsPet && sim.Position != LotTilePos.OUT_OF_WORLD);
+            var allAsleep = present.Any() && present.All(sim =>
+                sim.GetMotiveData(FSO.SimAntics.Model.VMMotive.SleepState) != 0);
+            if (!allAsleep)
+            {
+                if (vm.SpeedMultiplier == SleepingSpeed)
+                {
+                    vm.SpeedMultiplier = SpeedBeforeSleep;
+                    vm.ResetTickAlign();
+                }
+                SleepFastForwardDeclined = false;
+                SpeedBeforeSleep = 0;
+                return;
+            }
+            if (SpeedBeforeSleep != 0 && vm.SpeedMultiplier != SleepingSpeed)
+            {
+                SleepFastForwardDeclined = true;
+                SpeedBeforeSleep = 0;
+            }
+            if (!SleepFastForwardDeclined && vm.SpeedMultiplier > 0 && vm.SpeedMultiplier < SleepingSpeed)
+            {
+                SpeedBeforeSleep = vm.SpeedMultiplier;
+                vm.SpeedMultiplier = SleepingSpeed;
+                vm.ResetTickAlign();
+            }
+        }
+
         private void UpdateAutoFastForward()
         {
             var family = vm?.TS1State?.CurrentFamily;
@@ -425,7 +460,8 @@ namespace Simitone.Client.UI.Screens
                 GameThread.NextUpdate((FSO.Common.Rendering.Framework.Model.UpdateState ustate) => ChangeSpeedTo(0));
             }
             base.Update(state);
-            UpdateAutoFastForward();
+            UpdateSleepingSpeed();
+            if (vm?.SpeedMultiplier != SleepingSpeed) UpdateAutoFastForward();
 
             // Update weather effects (sounds and terrain)
             UpdateWeatherEffects();
@@ -492,7 +528,8 @@ namespace Simitone.Client.UI.Screens
                 Downtown = !returningHome;
                 if (returningHome && SavedLot != null)
                 {
-                    InitializeLot(SavedLot);
+                    var clock = vm.Context.Clock;
+                    InitializeLot(SavedLot, clock.Hours * 60 + clock.Minutes);
                     SavedLot = null;
                 }
                 else
@@ -657,6 +694,8 @@ namespace Simitone.Client.UI.Screens
         public void InitializeLot()
         {
             CleanupLastWorld();
+            SpeedBeforeSleep = 0;
+            SleepFastForwardDeclined = false;
             World = new FSO.LotView.World(GameFacade.GraphicsDevice);
 
             World.Opacity = 1;
@@ -696,12 +735,21 @@ namespace Simitone.Client.UI.Screens
             vm.OnGenericVMEvent += Vm_OnGenericVMEvent;
         }
 
-        public void InitializeLot(VMMarshal marshal)
+        public void InitializeLot(VMMarshal marshal, int? arrivalMinute = null)
         {
             DiagnosticLog.Event("lot-load-home-snapshot");
             InitializeLot();
             vm.MyUID = 65537;
             vm.Load(marshal);
+            if (arrivalMinute.HasValue)
+            {
+                // Carry the public lot's wall-clock time while retaining the home's
+                // saved calendar, simulation counters and household state.
+                var clock = vm.Context.Clock;
+                clock.Hours = arrivalMinute.Value / 60;
+                clock.Minutes = arrivalMinute.Value % 60;
+                clock.MinuteFractions = 0;
+            }
 
             ActiveFamily?.SelectWholeFamily();
             vm.TS1State.ActivateFamily(vm, ActiveFamily);
