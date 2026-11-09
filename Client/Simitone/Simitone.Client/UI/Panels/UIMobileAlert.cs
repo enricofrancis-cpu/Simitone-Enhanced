@@ -87,7 +87,11 @@ namespace Simitone.Client.UI.Panels
                 }
                 var btnElem = AddButton(buttonText, button.Type, button.Handler == null);
                 Buttons.Add(btnElem);
-                if (button.Handler != null) btnElem.OnButtonClick += button.Handler;
+                if (button.Handler != null)
+                    btnElem.OnButtonClick += element =>
+                    {
+                        if (!Closing) button.Handler(element);
+                    };
             }
 
             if (options.TextEntry)

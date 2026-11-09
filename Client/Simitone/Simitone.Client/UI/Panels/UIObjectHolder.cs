@@ -421,7 +421,11 @@ namespace Simitone.Client.UI.Panels
             else if (MouseClicked)
             {
                 //not holding an object, but one can be selected
-                var newHover = World.GetObjectIDAtScreenPos(state.MouseState.X, state.MouseState.Y, GameFacade.GraphicsDevice);
+                var portal = MouseClicked && !EyedropperMode
+                    ? ParentControl.PickPortalMarker(state.MouseState.Position)
+                    : (short)0;
+                var newHover = portal != 0 ? portal
+                    : World.GetObjectIDAtScreenPos(state.MouseState.X, state.MouseState.Y, GameFacade.GraphicsDevice);
 
                 // Eyedropper mode - pick object GUID or architecture pattern
                 // Priority: Objects (doors/windows in walls) → Walls → Floors
@@ -476,13 +480,19 @@ namespace Simitone.Client.UI.Panels
                     {
                         var ghostGroup = (UseNet) ? vm.Context.GhostCopyGroup(objGroup) : objGroup ;
                         ghostGroup.ChangePosition(objGroup.BaseObject.Position, objGroup.BaseObject.Direction, vm.Context, VMPlaceRequestFlags.Default);
-                        var canDelete = GameFacade.EnableMod || (objGroup.BaseObject.IsUserMovable(vm.Context, true)) == VMPlacementError.Success;
+                        var canDelete = portal == 0 &&
+                            (GameFacade.EnableMod || objGroup.BaseObject.IsUserMovable(vm.Context, true) == VMPlacementError.Success);
                         SetSelected(ghostGroup);
 
                         Holding.RealEnt = objGroup.BaseObject;
                         if (UseNet) RecursiveHide(Holding.RealEnt);
                         Holding.CanDelete = canDelete;
-                        Holding.MoveTarget = newHover;
+                        Holding.MoveTarget = portal != 0 ? objGroup.BaseObject.ObjectID : newHover;
+                        if (portal != 0)
+                        {
+                            var guid = vm.GetObjectById(portal).Object.OBJ.GUID;
+                            Holding.PortalMarkerColor = guid == 0x81E6BEF9 ? Color.DeepSkyBlue : Color.Gold;
+                        }
                         var estBase = state.MouseState.Position; //FSOEnvironment.SoftwareKeyboard ? new Point(UIScreen.Current.ScreenWidth / 2, UIScreen.Current.ScreenHeight / 2) : state.MouseState.Position;
                         Holding.TilePosOffset = new Vector2(objBasePos.x / 16f, objBasePos.y / 16f) - World.EstTileAtPosWithScroll(new Vector2(estBase.X, estBase.Y) / FSOEnvironment.DPIScaleFactor);
                         if (OnPickup != null) OnPickup(Holding, state);
@@ -595,6 +605,7 @@ namespace Simitone.Client.UI.Panels
         public int Price;
         public uint InventoryPID = 0;
         public bool CanDelete;
+        public Color? PortalMarkerColor;
         public VMEntity RealEnt;
 
         public bool IsBought

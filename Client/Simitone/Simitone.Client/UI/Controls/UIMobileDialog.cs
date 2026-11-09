@@ -81,7 +81,7 @@ namespace Simitone.Client.UI.Controls
             TitleLabel = new UILabel();
             TitleLabel.X = 50;
             TitleLabel.CaptionStyle = TitleLabel.CaptionStyle.Clone();
-            TitleLabel.CaptionStyle.Size = 37;
+            TitleLabel.CaptionStyle.Size = 29;
             TitleLabel.CaptionStyle.Color = UIStyle.Current.DialogTitle;
             TitleLabel.Alignment = TextAlignment.Top | TextAlignment.Left;
             Add(TitleLabel);
