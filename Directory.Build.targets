@@ -28,8 +28,9 @@
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/NetPlay/Model/Commands/VMNetChangeControlCmd.cs"><ExpectedHash>2C85386709F4F79D29A949520833F67891DA3E6063723B3494CF5F46BC555D2D</ExpectedHash><ExpectedHashCRLF>0BF21E6A145EDAC7F1A233F093EF2F51BFAB9666CEB099B3A8F4FDF7144D1E7B</ExpectedHashCRLF></_EnhancedBaseSource>
   </ItemGroup>
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.LotView'">
-    <Compile Remove="Components/ObjectComponent.cs;LMap/LMapBatch.cs;Components/RoofComponent.cs" />
+    <Compile Remove="Components/ObjectComponent.cs;LMap/LMapBatch.cs;Components/RoofComponent.cs;Components/Geometry/Modelled3DPool.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)EngineOverrides/FSO.LotView/**/*.cs" />
+    <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Components/Geometry/Modelled3DPool.cs"><ExpectedHash>5EA0CD2FC7837770A4E2687E5E01F366117EF571AD2A619842F11E72288F81D2</ExpectedHash><ExpectedHashCRLF>9116819F57494B12F1ADA9B4A2D6826E5F91FB8EFF9BACCE6F4A51E88C725BB7</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Components/RoofComponent.cs"><ExpectedHash>1D7A28B589273459CF562A720AA33A17A0F7C92F4F904E33AC448930218BE8E7</ExpectedHash><ExpectedHashCRLF>5B3A9BE763E30711880E75FC69245C5C71B055BA70FCEE4CB22AA9ADC1897E1D</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/Components/ObjectComponent.cs"><ExpectedHash>CC07613705315DBFDA59B56692E85EFE64928A849EB7276D8367AA8A870E5A55</ExpectedHash><ExpectedHashCRLF>90A025427C64A19C3B728C97D15C4CDAC4550FFBF943BAC45316E8DC15C475F1</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/LMap/LMapBatch.cs"><ExpectedHash>FFC9139E1B43E454839A9E6A3C6916ADB235086F64CC22326821016DB27D72A2</ExpectedHash><ExpectedHashCRLF>454F20DC5380BCED98F4ED945921CEBF50D8C23457D3016CE2C9E63834D47772</ExpectedHashCRLF></_EnhancedBaseSource>
@@ -39,6 +40,11 @@
     <Compile Include="$(MSBuildThisFileDirectory)EngineOverrides/FSO.Vitaboy/**/*.cs" />
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/BCF.cs"><ExpectedHash>E8753A20276FBB47BC1C58E128226E68CB6D01B6A69A425891FDEF3AAA8D5D47</ExpectedHash><ExpectedHashCRLF>A09CD61C277BB7729D666741600B6FBC2DE81D96034F1E79CD76B656718DED7B</ExpectedHashCRLF></_EnhancedBaseSource>
     <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/CFP.cs"><ExpectedHash>8E0E73EB1EE3A3BC30FA27C5DFF68AF211EC639FF8CB826A93AE50830EB17C79</ExpectedHash><ExpectedHashCRLF>B018BE04F909D761198372802A72BDDA4C1DFC15F4673D55AA91D0BB16680FDE</ExpectedHashCRLF></_EnhancedBaseSource>
+  </ItemGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.Vitaboy.Engine'">
+    <Compile Remove="SimAvatar.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)EngineOverrides/FSO.Vitaboy.Engine/**/*.cs" />
+    <_EnhancedBaseSource Include="$(MSBuildProjectDirectory)/SimAvatar.cs"><ExpectedHash>756C52A91998BA1B40C9CD6CA2335880EED1F85310870C85E01FA972ED04C244</ExpectedHash><ExpectedHashCRLF>9B408807B1E10C2F762F55411DAA581BAB4A43BAA8B403B1F381B2190000079F</ExpectedHashCRLF></_EnhancedBaseSource>
   </ItemGroup>
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'FSO.Files'">
     <Compile Remove="Utils/BCFReadProxy.cs" />

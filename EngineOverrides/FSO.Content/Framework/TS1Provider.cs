@@ -16,6 +16,7 @@ namespace FSO.Content.Framework
         private Dictionary<string, string[]> BareFoldersByExtension = new Dictionary<string, string[]>()
         {
             { ".bmp", new string[] { "GameData/Skins/", "ExpansionShared/SkinsBuy/" } },
+            { ".tga", new string[] { "GameData/Skins/", "ExpansionShared/SkinsBuy/" } },
             { ".cmx", new string[] { "GameData/Skins/", "ExpansionShared/SkinsBuy/", "Downloads/" } }, // downloads for animations
             { ".skn", new string[] { "GameData/Skins/", "ExpansionShared/SkinsBuy/" } },
             { ".iff", new string[] { "Downloads/" } },

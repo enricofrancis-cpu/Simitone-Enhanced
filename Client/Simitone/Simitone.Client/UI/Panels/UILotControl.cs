@@ -496,8 +496,17 @@ namespace Simitone.Client.UI.Panels
                 var vacation = lot >= 40 && lot < 50;
                 var clickEvent = studioTown ? "studio-town-click" : vacation ? "vacation-click" : null;
                 bool objSelected = newHover > 0;
+                var floorDetails = "";
+                var architecture = vm.Context.Architecture;
+                if (vacation && World.State.Level >= 1 && World.State.Level <= architecture.Floors.Length &&
+                    tilePos.X >= 0 && tilePos.X < architecture.Width &&
+                    tilePos.Y >= 0 && tilePos.Y < architecture.Height)
+                {
+                    var floor = architecture.GetFloor((short)tilePos.X, (short)tilePos.Y, World.State.Level);
+                    floorDetails = $"; tile=({(int)tilePos.X},{(int)tilePos.Y},{World.State.Level}); floor={floor.Pattern}; rotation={World.State.Rotation}; zoom={World.State.Zoom}; camera={World.State.CameraMode}";
+                }
                 if (clickEvent != null && !objSelected)
-                    DiagnosticLog.Event(clickEvent, $"lot={lot}; tile={targetPos}; hit=none");
+                    DiagnosticLog.Event(clickEvent, $"lot={lot}; hit=none{floorDetails}");
                 if (objSelected || (GotoObject.Position != LotTilePos.OUT_OF_WORLD && newHover <= 0))
                 {
                     if (objSelected)
@@ -521,7 +530,7 @@ namespace Simitone.Client.UI.Panels
                         var clicked = obj;
                         obj = ResolveLiveTarget(obj);
                         var clickTarget = clickEvent != null && objSelected && obj is VMGameObject && ActiveEntity is VMAvatar actor
-                            ? $"lot={lot}; hit={clicked.Object.OBJ.GUID:X8}; guid={obj.Object.OBJ.GUID:X8}; object={obj.Object.OBJ.ChunkLabel}; person-type={actor.GetPersonData(FSO.SimAntics.Model.VMPersonDataVariable.PersonType)}"
+                            ? $"lot={lot}; hit={clicked.Object.OBJ.GUID:X8}; guid={obj.Object.OBJ.GUID:X8}; object={obj.Object.OBJ.ChunkLabel}; person-type={actor.GetPersonData(FSO.SimAntics.Model.VMPersonDataVariable.PersonType)}{floorDetails}"
                             : null;
                         if (obj is VMGameObject && ((VMGameObject)obj).Disabled > 0)
                         {
@@ -562,7 +571,7 @@ namespace Simitone.Client.UI.Panels
                             else if (vacation && (IsVacationPayPhone(clicked) || IsVacationPayPhone(obj))
                                 && GameFacade.Screens.CurrentUIScreen is TS1GameScreen game)
                             {
-                                game.OfferVacationReturnHome();
+                                game.OfferVacationPhoneTravel();
                             }
                         }
                     }

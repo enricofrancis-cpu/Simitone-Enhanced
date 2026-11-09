@@ -183,11 +183,12 @@ try {
     content.TS1BasePath=root + Path.DirectorySeparatorChar;
     content.TS1AllFiles=new[]{"GameData/Skins/lower.cmx","GameData/Skins/upper.CMX","gamedata/skins/folder.cmx",
         "GameData/Skins/lower.cfp","GameData/Skins/upper.CFP","Downloads/lower.iff","Downloads/upper.IFF",
-        "GameData/Skins/ignored.cmx.backup","Downloads/ignored.iff.bak","Downloads/not-an-archive.far.backup"};
+        "GameData/Skins/hand.TGA","ExpansionShared/SkinsBuy/outfit.tga","GameData/Skins/ignored.tga.bak","GameData/Skins/ignored.cmx.backup","Downloads/ignored.iff.bak","Downloads/not-an-archive.far.backup"};
     var discovery=new TS1Provider(content); discovery.Init();
     Check(discovery.BuildDictionary(".cmx","globals").Keys.Order().SequenceEqual(new[]{"folder.cmx","lower.cmx","upper.cmx"}),"mixed-case CMX discovery or backup exclusion failed");
     Check(discovery.BuildDictionary(".cfp","globals").Keys.Order().SequenceEqual(new[]{"lower.cfp","upper.cfp"}),"mixed-case CFP discovery failed");
     Check(discovery.BuildDictionary(".iff","globals").Keys.Order().SequenceEqual(new[]{"lower.iff","upper.iff"}),"mixed-case object discovery failed");
+    Check(discovery.BuildDictionary(".tga","globals").Keys.Order().SequenceEqual(new[]{"hand.tga","outfit.tga"}),"loose TGA texture discovery or backup exclusion failed");
     var animation=new Animation {Name="fixture-animation",XSkillName="fixture",TranslationCount=1,RotationCount=1};
     var badCfp=new CFP {Data=Array.Empty<byte>()};
     var animationProvider=new TS1BCFProvider(content,null) {
